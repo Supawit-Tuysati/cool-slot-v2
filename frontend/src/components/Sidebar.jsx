@@ -45,7 +45,7 @@ function Sidebar() {
       icon: Calendar,
       title: "จัดการการจอง",
     },
-     {
+    {
       path: "/departments",
       icon: Building,
       title: "จัดการแผนก",
@@ -60,7 +60,6 @@ function Sidebar() {
       icon: Bell,
       title: "จัดการการแจ้งเตือน",
     },
-    
   ];
 
   return (
@@ -202,8 +201,8 @@ function Sidebar() {
               </div>
               {!collapsed && (
                 <div className="ml-3">
-                  {/* <p className="text-sm font-medium text-sidebar-foreground">{user?.email || "email"}</p> */}
-                  {/* <p className="text-xs text-sidebar-foreground/60">{user?.department.name || "department name"}</p> */}
+                  <p className="text-sm font-medium text-sidebar-foreground">{user?.email || "email"}</p>
+                  <p className="text-xs text-sidebar-foreground/60">{user?.department.name || "department name"}</p>
                 </div>
               )}
             </div>

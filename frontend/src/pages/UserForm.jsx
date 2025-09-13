@@ -9,13 +9,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../co
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Eye, EyeOff, User, Mail, Building, UserPlus, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 const AddUser = () => {
   const API_HOST = import.meta.env.VITE_API_HOST;
   const API_PORT = import.meta.env.VITE_API_PORT;
   const BASE_URL = `${API_HOST}:${API_PORT}`;
-
+  const { token } = useAuth();
   const navigate = useNavigate();
+
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -35,21 +38,20 @@ const AddUser = () => {
   const [departments, setDepartments] = useState([]);
 
   const fetchDepartments = async () => {
-    const token = localStorage.getItem("token");
 
     try {
       const { data } = await axios.get(`${BASE_URL}/api/department/getDepartments`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const formatted = data.map((dept) => ({
+      const formatDepartment = data.map((dept) => ({
         id: dept.id,
         name: dept.name,
         description: dept.description || "-",
         created_at: dept.created_at,
       }));
 
-      setDepartments(formatted);
+      setDepartments(formatDepartment);
     } catch (err) {
       console.error("Failed to fetch departments:", err);
     }
@@ -295,9 +297,7 @@ const AddUser = () => {
                         value={formData.role_id?.toString()}
                         onValueChange={(value) => setFormData((prev) => ({ ...prev, role_id: parseInt(value) }))}
                       >
-                        <SelectTrigger
-                          className={`w-full ${errors.role ? "border-red-500" : ""}`}
-                        >
+                        <SelectTrigger className={`w-full ${errors.role ? "border-red-500" : ""}`}>
                           <SelectValue placeholder="ระดับใช้งาน" />
                         </SelectTrigger>
                         <SelectContent>
@@ -324,11 +324,7 @@ const AddUser = () => {
                       value={formData.department_id?.toString()}
                       onValueChange={(value) => setFormData((prev) => ({ ...prev, department_id: parseInt(value) }))}
                     >
-                      <SelectTrigger
-                        className={`w-full pl-10 ${
-                          errors.department ? "border-red-500" : ""
-                        }`}
-                      >
+                      <SelectTrigger className={`w-full pl-10 ${errors.department ? "border-red-500" : ""}`}>
                         <SelectValue placeholder="เลือกแผนก" />
                       </SelectTrigger>
                       <SelectContent>
@@ -422,7 +418,10 @@ const AddUser = () => {
           className="fixed inset-0 backdrop-blur-sm bg-white/50 z-50 flex items-center justify-center"
           onClick={() => setIsDeptModalOpen(false)} // คลิกที่พื้นที่นอก modal ปิด modal
         >
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2 className="text-xl font-semibold mb-4">เพิ่มแผนกใหม่</h2>
             <div className="space-y-4">
               <div>

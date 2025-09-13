@@ -24,16 +24,13 @@ export const findUserById = async (id) => {
 
 export const findAllUsers = async () => {
   return await prisma.user.findMany({
-    orderBy: [
-      { deleted_at: { sort: 'asc', nulls: 'first' } },
-      { created_at: 'asc' },
-    ],
+    orderBy: [{ status: "asc" }],
     select: {
       id: true,
       name: true,
       email: true,
       lastLogin: true,
-      deleted_at: true,
+      status: true,
       role: {
         select: { name: true },
       },
@@ -56,7 +53,7 @@ export const updateLastLogin = (email) => {
   });
 };
 
-export const editUser = async ({id, name, email, role_id, department_id, line_user_id, updated_by}) => {
+export const editUser = async ({ id, name, email, role_id, department_id, line_user_id, updated_by }) => {
   return await prisma.user.update({
     where: { id },
     data: {
@@ -71,12 +68,8 @@ export const editUser = async ({id, name, email, role_id, department_id, line_us
   });
 };
 
-export const delUser = async ({ id, deleted_by }) => {
+export const delUser = async ({ id }) => {
   return await prisma.user.update({
     where: { id },
-    data: {
-      deleted_by,
-      deleted_at: new Date(),
-    },
   });
 };

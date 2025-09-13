@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
-// import axios from "axios"; // Removed axios
+import axios from "axios";
 
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-// import { toast } from "react-toastify"; // Removed toast
+import { toast } from "react-toastify";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import {
@@ -17,9 +17,9 @@ import {
 import { Search, MoreHorizontal, Edit, Trash2, Building } from "lucide-react";
 
 const Departments = () => {
-  // const API_HOST = import.meta.env.VITE_API_HOST; // Removed backend related variables
-  // const API_PORT = import.meta.env.VITE_API_PORT;
-  // const BASE_URL = `${API_HOST}:${API_PORT}`;
+  const API_HOST = import.meta.env.VITE_API_HOST;
+  const API_PORT = import.meta.env.VITE_API_PORT;
+  const BASE_URL = `${API_HOST}:${API_PORT}`;
 
   const [departments, setDepartments] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -32,17 +32,25 @@ const Departments = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
-  // Mock data for departments
-  const mockDepartments = [
-    { id: "dept-1", name: "IT", description: "Information Technology", created_at: new Date().toISOString() },
-    { id: "dept-2", name: "HR", description: "Human Resources", created_at: new Date().toISOString() },
-    { id: "dept-3", name: "Finance", description: "Financial Department", created_at: new Date().toISOString() },
-  ];
-
   const fetchDepartments = async () => {
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    setDepartments(mockDepartments);
+    const token = localStorage.getItem("token");
+
+    try {
+      const { data } = await axios.get(`${BASE_URL}/api/department/getDepartments`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const formatted = data.map((dept) => ({
+        id: dept.id,
+        name: dept.name,
+        description: dept.description || "-",
+        created_at: dept.created_at,
+      }));
+
+      setDepartments(formatted);
+    } catch (err) {
+      console.error("Failed to fetch departments:", err);
+    }
   };
 
   useEffect(() => {
@@ -50,37 +58,46 @@ const Departments = () => {
   }, []);
 
   const filteredDepartments = departments.filter((dept) => dept.name.toLowerCase().includes(searchTerm.toLowerCase()));
-
   const handleSaveDepartment = async () => {
     const trimmedName = newDepartment.trim();
     const trimmedDesc = newDepartmentDes.trim();
 
-    if (!trimmedName) {
-      console.warn("กรุณากรอกชื่อแผนก"); // Replaced toast with console.warn
-      return;
-    }
+    if (!trimmedName) return toast.warning("กรุณากรอกชื่อแผนก");
 
     const isDuplicate = departments.some((d) => d.name.trim().toLowerCase() === trimmedName.toLowerCase());
 
     if (isDuplicate) {
-      console.warn("ชื่อแผนกนี้มีอยู่แล้ว"); // Replaced toast with console.warn
+      toast.warning("ชื่อแผนกนี้มีอยู่แล้ว");
       return;
     }
 
-    // Simulate saving a new department
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    const newDept = {
-      id: `dept-${Date.now()}`,
-      name: trimmedName,
-      description: trimmedDesc || "-",
-      created_at: new Date().toISOString(),
-    };
-    setDepartments((prev) => [...prev, newDept]);
-    console.log("บันทึกสำเร็จ (จำลอง)"); // Replaced toast with console.log
+    try {
+      const token = localStorage.getItem("token");
 
-    setNewDepartment("");
-    setNewDepartmentDes("");
-    setIsDeptModalOpen(false);
+      const dataDept = {
+        name: trimmedName,
+        description: trimmedDesc || "-",
+      };
+
+      const response = await axios.post(`${BASE_URL}/api/department/createDepartment`, dataDept, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.status === 200 || response.status === 201) {
+        toast.success("บันทึกสำเร็จ");
+
+        await fetchDepartments();
+
+        setNewDepartment("");
+        setNewDepartmentDes("");
+        setIsDeptModalOpen(false);
+      } else {
+        toast.error("ไม่สามารถบันทึกได้");
+      }
+    } catch (error) {
+      console.error("Error saving department:", error);
+      toast.error("เกิดข้อผิดพลาดในการบันทึก");
+    }
   };
 
   const handleEditClick = (dept) => {
@@ -91,42 +108,6 @@ const Departments = () => {
   const handleDeleteClick = (dept) => {
     setSelectedDepartment(dept);
     setIsDeleteModalOpen(true);
-  };
-
-  const handleUpdateDepartment = async () => {
-    const trimmedName = selectedDepartment.name.trim();
-
-    if (!trimmedName) {
-      console.warn("กรุณากรอกชื่อแผนก"); // Replaced toast with console.warn
-      return;
-    }
-
-    const isDuplicate = departments.some(
-      (d) => d.id !== selectedDepartment.id && d.name.trim().toLowerCase() === trimmedName.toLowerCase()
-    );
-
-    if (isDuplicate) {
-      console.warn("ชื่อแผนกนี้มีอยู่แล้ว"); // Replaced toast with console.warn
-      return;
-    }
-
-    // Simulate updating a department
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setDepartments((prev) =>
-      prev.map((dept) => (dept.id === selectedDepartment.id ? selectedDepartment : dept))
-    );
-    console.log("แก้ไขสำเร็จ (จำลอง)"); // Replaced toast with console.log
-    setIsEditModalOpen(false);
-    setSelectedDepartment(null);
-  };
-
-  const handleConfirmDelete = async () => {
-    // Simulate deleting a department
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setDepartments((prev) => prev.filter((dept) => dept.id !== selectedDepartment.id));
-    console.log("ลบสำเร็จ (จำลอง)"); // Replaced toast with console.log
-    setIsDeleteModalOpen(false);
-    setSelectedDepartment(null);
   };
 
   return (
@@ -143,7 +124,7 @@ const Departments = () => {
         </Button>
       </div>
 
-      {/* Modal for Add Department */}
+      {/* Modal */}
       {isDeptModalOpen && (
         <div
           className="fixed inset-0 backdrop-blur-sm bg-white/50 z-50 flex items-center justify-center"
@@ -183,7 +164,6 @@ const Departments = () => {
                   onClick={() => {
                     setIsDeptModalOpen(false);
                     setNewDepartment("");
-                    setNewDepartmentDes("");
                   }}
                 >
                   ยกเลิก
@@ -263,7 +243,6 @@ const Departments = () => {
         </CardContent>
       </Card>
 
-      {/* Modal for Edit Department */}
       {isEditModalOpen && selectedDepartment && (
         <div
           className="fixed inset-0 backdrop-blur-sm bg-white/50 z-50 flex items-center justify-center"
@@ -297,7 +276,47 @@ const Departments = () => {
                 </Button>
                 <Button
                   className="bg-blue-600 hover:bg-blue-700"
-                  onClick={handleUpdateDepartment}
+                  onClick={async () => {
+                    const trimmedName = selectedDepartment.name.trim();
+
+                    if (!trimmedName) return toast.warning("กรุณากรอกชื่อแผนก");
+
+                    const isDuplicate = departments.some(
+                      (d) => d.id !== selectedDepartment.id && d.name.trim().toLowerCase() === trimmedName.toLowerCase()
+                    );
+
+                    if (isDuplicate) {
+                      toast.warning("ชื่อแผนกนี้มีอยู่แล้ว");
+                      return;
+                    }
+
+                    try {
+                      const token = localStorage.getItem("token");
+                      const response = await axios.put(
+                        `${BASE_URL}/api/department/updateDepartment/${selectedDepartment.id}`,
+                        {
+                          name: selectedDepartment.name,
+                          description: selectedDepartment.description,
+                        },
+                        {
+                          headers: { Authorization: `Bearer ${token}` },
+                        }
+                      );
+
+                      if (response.status === 200) {
+                        toast.success("แก้ไขสำเร็จ");
+
+                        await fetchDepartments();
+                        setIsEditModalOpen(false);
+                        setSelectedDepartment(null);
+                      } else {
+                        toast.error("ไม่สามารถแก้ไขได้");
+                      }
+                    } catch (err) {
+                      toast.error("เกิดข้อผิดพลาดในการแก้ไข");
+                      console.error(err);
+                    }
+                  }}
                 >
                   บันทึก
                 </Button>
@@ -307,7 +326,6 @@ const Departments = () => {
         </div>
       )}
 
-      {/* Modal for Delete Department */}
       {isDeleteModalOpen && selectedDepartment && (
         <div
           className="fixed inset-0 backdrop-blur-sm bg-white/50 z-50 flex items-center justify-center"
@@ -327,7 +345,34 @@ const Departments = () => {
               </Button>
               <Button
                 className="bg-red-600 hover:bg-red-700"
-                onClick={handleConfirmDelete}
+                onClick={async () => {
+                  try {
+                    const token = localStorage.getItem("token");
+                    const response = await axios.delete(
+                      `${BASE_URL}/api/department/deleteDepartment/${selectedDepartment.id}`,
+                      {
+                        headers: { Authorization: `Bearer ${token}` },
+                      }
+                    );
+
+                    if (response.status === 200) {
+                      toast.success("ลบสำเร็จ");
+
+                      await fetchDepartments();
+                      setIsEditModalOpen(false);
+                      setSelectedDepartment(null);
+                    } else {
+                      toast.error("ไม่สามารถลบได้");
+                    }
+                  } catch (err) {
+                    if (err.response && err.response.status === 400) {
+                      toast.error(err.response.data.message);
+                    } else {
+                      toast.error("เกิดข้อผิดพลาดในการลบ");
+                    }
+                    console.error(err);
+                  }
+                }}
               >
                 ลบ
               </Button>
@@ -340,4 +385,3 @@ const Departments = () => {
 };
 
 export default Departments;
-

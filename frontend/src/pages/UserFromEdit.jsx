@@ -9,13 +9,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../co
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { User, Mail, Building, UserPlus, ArrowLeft } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 const EditUser = () => {
   const API_HOST = import.meta.env.VITE_API_HOST;
   const API_PORT = import.meta.env.VITE_API_PORT;
   const BASE_URL = `${API_HOST}:${API_PORT}`;
-
+  const { token } = useAuth();
   const navigate = useNavigate();
+
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -33,20 +36,19 @@ const EditUser = () => {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   const fetchDepartments = async () => {
-    const token = localStorage.getItem("token");
 
     try {
       const { data } = await axios.get(`${BASE_URL}/api/department/getDepartments`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const formatted = data.map((dept) => ({
+      const formatDepartment = data.map((dept) => ({
         id: dept.id,
         name: dept.name,
       }));
 
-      setDepartments(formatted);
-      return formatted;
+      setDepartments(formatDepartment);
+      return formatDepartment;
     } catch (err) {
       console.error("Failed to fetch departments:", err);
       return [];
@@ -401,8 +403,14 @@ const EditUser = () => {
       </Card>
 
       {isDeptModalOpen && (
-        <div className="fixed inset-0 backdrop-blur-sm bg-white/50 z-50 flex items-center justify-center" onClick={() => setIsDeptModalOpen(false)}>
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 backdrop-blur-sm bg-white/50 z-50 flex items-center justify-center"
+          onClick={() => setIsDeptModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md relative"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2 className="text-xl font-semibold mb-4">เพิ่มแผนกใหม่</h2>
             <div className="space-y-4">
               <div>

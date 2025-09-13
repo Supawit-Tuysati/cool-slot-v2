@@ -34,6 +34,8 @@ export const getUserData = async (req, res) => {
 export const getUsers = async (req, res) => {
   try {
     const users = await findAllUsers();
+    console.log(users );
+    
     res.json(users);
   } catch (error) {
     console.error("getProfileAll error:", error);
@@ -71,16 +73,12 @@ export const updateUser = async (req, res) => {
 export const deleteUser = async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const deleted_by = req.user.id;
 
     if (!id) {
       return res.status(400).json({ message: "Missing department ID" });
     }
 
-    const deletedDepartment = await delUser({
-      id,
-      deleted_by,
-    });
+    const deletedDepartment = await delUser({id});
 
     res.json(deletedDepartment);
   } catch (error) {
