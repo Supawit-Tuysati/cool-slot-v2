@@ -1,0 +1,28 @@
+----- DATABASE -----
+npm run prisma:generate
+npm run prisma:migrate --name init #สร้าง migration และ apply ลง database
+npm run prisma:seed #seed database
+npm run prisma:reset #reste และ seed database
+
+
+----- API REGISTER -----
+curl --location 'http://localhost:5000/api/auth/register' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "name": "TEST",
+    "email": "test@example.com",
+    "password": "123456",
+    "role_id": 2,
+    "department_id": 2,
+    "employee_code": "EM004",
+    "lastLogin": null,
+    "created_by": 0
+}'
+
+----- API LOGIN -----
+curl --location 'http://localhost:5000/api/auth/login' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+  "email": "admin@example.com",
+  "password": "123456"
+}'
