@@ -1,10 +1,10 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient,UserStatus  } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  // ✅ Roles (unique by name)
+  // Roles
   const adminRole = await prisma.role.upsert({
     where: { name: "admin" },
     update: {},
@@ -21,26 +21,70 @@ async function main() {
     create: { name: "cleaner", created_by: 0 },
   });
 
-  const department = await prisma.department.upsert({
+  // Departments (ต้องมี @unique ที่ name ใน schema แล้ว)
+  const departmentIT = await prisma.department.upsert({
     where: { name: "IT" },
     update: {},
     create: { name: "IT", description: "ฝ่ายไอที", created_by: 0 },
   });
+  const departmentHR = await prisma.department.upsert({
+    where: { name: "HR" },
+    update: {},
+    create: { name: "HR", description: "ฝ่ายทรัพยากรบุคคล", created_by: 0 },
+  });
+  const departmentCleaner = await prisma.department.upsert({
+    where: { name: "Cleaner" },
+    update: {},
+    create: { name: "Cleaner", description: "ฝ่ายทำความสะอาด", created_by: 0 },
+  });
 
-  // ✅ Hash password (ใช้ bcrypt)/*  */
+  // Hash password
   const hashedPassword = await bcrypt.hash("123456", 10);
 
-  // ✅ User admin
+  // Users (ต้องมี update:{} ใน upsert)
   await prisma.user.upsert({
     where: { email: "admin@example.com" },
-    update: {}, // ถ้าอยากรีเซ็ตรหัสทุกครั้ง ใส่: { password: hashedPassword }
+    update: {},
     create: {
-      name: "Admin User",
+      name: "Admin",
       email: "admin@example.com",
-      password: hashedPassword, // <<<<< hash แล้ว
+      password: hashedPassword,
+status: UserStatus.Active,
       employee_code: "EMP001",
-      department_id: department.id,
+      department_id: departmentIT.id,
       role_id: adminRole.id,
+      lastLogin: null,
+      created_by: 0,
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: "user@example.com" },
+    update: {},
+    create: {
+      name: "User",
+      email: "user@example.com",
+      password: hashedPassword,
+    status: UserStatus.Active,
+      employee_code: "EMP002",
+      department_id: departmentHR.id,
+      role_id: userRole.id,
+      lastLogin: null,
+      created_by: 0,
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: "cleaner@example.com" },
+    update: {},
+    create: {
+      name: "Cleaner",
+      email: "cleaner@example.com",
+      password: hashedPassword,
+    status: UserStatus.Active,
+      employee_code: "EMP003",
+      department_id: departmentCleaner.id,
+      role_id: cleanerRole.id,
       lastLogin: null,
       created_by: 0,
     },

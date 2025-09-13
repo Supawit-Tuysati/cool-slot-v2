@@ -21,6 +21,7 @@ CREATE TABLE `departments` (
     `updated_at` DATETIME(3) NOT NULL,
     `updated_by` INTEGER NULL,
 
+    UNIQUE INDEX `departments_name_key`(`name`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -30,6 +31,7 @@ CREATE TABLE `users` (
     `name` VARCHAR(100) NOT NULL,
     `email` VARCHAR(50) NOT NULL,
     `password` TEXT NOT NULL,
+    `status` ENUM('Active', 'Inactive') NOT NULL DEFAULT 'Active',
     `employee_code` VARCHAR(12) NULL,
     `department_id` INTEGER NOT NULL,
     `line_user_id` VARCHAR(50) NULL,
