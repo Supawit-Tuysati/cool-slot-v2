@@ -4,7 +4,7 @@ CREATE TABLE `roles` (
     `name` VARCHAR(50) NOT NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `created_by` INTEGER NULL,
-    `updated_at` DATETIME(3) NOT NULL,
+    `updated_at` DATETIME(3) NULL,
     `updated_by` INTEGER NULL,
 
     UNIQUE INDEX `roles_name_key`(`name`),
@@ -18,7 +18,7 @@ CREATE TABLE `departments` (
     `description` VARCHAR(191) NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `created_by` INTEGER NULL,
-    `updated_at` DATETIME(3) NOT NULL,
+    `updated_at` DATETIME(3) NULL,
     `updated_by` INTEGER NULL,
 
     UNIQUE INDEX `departments_name_key`(`name`),
@@ -39,7 +39,7 @@ CREATE TABLE `users` (
     `lastLogin` DATETIME(3) NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `created_by` INTEGER NULL,
-    `updated_at` DATETIME(3) NOT NULL,
+    `updated_at` DATETIME(3) NULL,
     `updated_by` INTEGER NULL,
 
     UNIQUE INDEX `users_email_key`(`email`),
@@ -54,7 +54,7 @@ CREATE TABLE `fridges` (
     `description` TEXT NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `created_by` INTEGER NULL,
-    `updated_at` DATETIME(3) NOT NULL,
+    `updated_at` DATETIME(3) NULL,
     `updated_by` INTEGER NULL,
 
     PRIMARY KEY (`id`)
@@ -68,7 +68,7 @@ CREATE TABLE `fridge_shelves` (
     `shelf_name` VARCHAR(100) NOT NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `created_by` INTEGER NULL,
-    `updated_at` DATETIME(3) NOT NULL,
+    `updated_at` DATETIME(3) NULL,
     `updated_by` INTEGER NULL,
 
     PRIMARY KEY (`id`)
@@ -82,7 +82,7 @@ CREATE TABLE `fridge_slots` (
     `is_disabled` BOOLEAN NOT NULL DEFAULT false,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `created_by` INTEGER NULL,
-    `updated_at` DATETIME(3) NOT NULL,
+    `updated_at` DATETIME(3) NULL,
     `updated_by` INTEGER NULL,
 
     PRIMARY KEY (`id`)
@@ -100,7 +100,7 @@ CREATE TABLE `bookings` (
     `cancel_reason` VARCHAR(255) NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `created_by` INTEGER NULL,
-    `updated_at` DATETIME(3) NOT NULL,
+    `updated_at` DATETIME(3) NULL,
     `updated_by` INTEGER NULL,
 
     PRIMARY KEY (`id`)
@@ -115,7 +115,7 @@ CREATE TABLE `booking_items` (
     `note` VARCHAR(191) NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `created_by` INTEGER NULL,
-    `updated_at` DATETIME(3) NOT NULL,
+    `updated_at` DATETIME(3) NULL,
     `updated_by` INTEGER NULL,
 
     PRIMARY KEY (`id`)

@@ -16,7 +16,6 @@ export const getUser = async (req, res) => {
 };
 
 export const getUserData = async (req, res) => {
-  // console.log(req.params.id);
   
   try {
     const user = await findUserById(Number(req.params.id));
