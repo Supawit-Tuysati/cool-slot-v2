@@ -1,5 +1,6 @@
+// EditFridgeForm.jsx - Edit only version
 import { useState, useEffect } from "react";
-// import axios from "axios"; // Removed axios
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,14 +10,16 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Save, Plus, Trash2, Layers, Grid3X3 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-// import { toast } from "react-toastify"; // Removed toast
+import { toast } from "react-toastify";
+import { useAuth } from "../contexts/AuthContext";
 
 function EditFridgeForm() {
   const navigate = useNavigate();
   const { id } = useParams(); // ดึง id จาก URL parameters
-  // const API_HOST = import.meta.env.VITE_API_HOST; // Removed backend related variables
-  // const API_PORT = import.meta.env.VITE_API_PORT;
-  // const BASE_URL = `${API_HOST}:${API_PORT}`;
+  const API_HOST = import.meta.env.VITE_API_HOST;
+  const API_PORT = import.meta.env.VITE_API_PORT;
+  const BASE_URL = `${API_HOST}:${API_PORT}`;
+  const { token } = useAuth();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -29,71 +32,18 @@ function EditFridgeForm() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Mock data for fridges
-  const mockFridgesData = {
-    "fridge-1": {
-      id: "fridge-1",
-      name: "ตู้เย็นส่วนกลาง 1",
-      location: "อาคาร A ชั้น 1",
-      description: "ตู้เย็นสำหรับเก็บอาหารและเครื่องดื่มทั่วไป",
-      shelves: [
-        {
-          id: 101,
-          shelf_number: 1,
-          shelf_name: "ชั้นที่ 1",
-          slots: [
-            { id: 1001, slot_number: 1 },
-            { id: 1002, slot_number: 2 },
-            { id: 1003, slot_number: 3 },
-          ],
-        },
-        {
-          id: 102,
-          shelf_number: 2,
-          shelf_name: "ชั้นที่ 2",
-          slots: [
-            { id: 1004, slot_number: 1 },
-            { id: 1005, slot_number: 2 },
-          ],
-        },
-      ],
-    },
-    "fridge-2": {
-      id: "fridge-2",
-      name: "ตู้เย็นส่วนกลาง 2",
-      location: "อาคาร B ชั้น 2",
-      description: "ตู้เย็นสำหรับเก็บของสด",
-      shelves: [
-        {
-          id: 201,
-          shelf_number: 1,
-          shelf_name: "ชั้นที่ 1",
-          slots: [
-            { id: 2001, slot_number: 1 },
-            { id: 2002, slot_number: 2 },
-            { id: 2003, slot_number: 3 },
-            { id: 2004, slot_number: 4 },
-          ],
-        },
-      ],
-    },
-  };
-
   // โหลดข้อมูลตู้เย็น
   useEffect(() => {
     const loadFridgeData = async () => {
       try {
         setIsLoading(true);
-        // Simulate API call delay
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        const response = await axios.get(`${BASE_URL}/api/fridge/editFridge/${id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-        const fridgeData = mockFridgesData[id];
-
-        if (!fridgeData) {
-          console.error("ไม่พบตู้เย็นที่ต้องการแก้ไข (จำลอง)"); // Replaced toast with console.error
-          navigate("/fridge-management");
-          return;
-        }
+        const fridgeData = response.data;
 
         setFormData({
           name: fridgeData.name,
@@ -101,37 +51,44 @@ function EditFridgeForm() {
           description: fridgeData.description || "",
         });
 
+        // แปลงข้อมูลชั้นและช่องให้เป็นรูปแบบที่ frontend ใช้
         if (fridgeData.shelves && fridgeData.shelves.length > 0) {
           const shelvesData = fridgeData.shelves.map((shelf) => ({
-            id: shelf.id,
+            id: shelf.id, // เก็บ ID จริงจากฐานข้อมูล
             shelf_number: shelf.shelf_number,
             shelf_name: shelf.shelf_name,
             slots: shelf.slots.map((slot) => ({
-              id: slot.id,
+              id: slot.id, // เก็บ ID จริงจากฐานข้อมูล
               slot_number: slot.slot_number,
             })),
           }));
           setShelves(shelvesData);
         } else {
+          // ถ้าไม่มีชั้น ให้สร้างชั้นเริ่มต้น
           setShelves([
             {
-              id: `temp_${Date.now()}`,
+              id: `temp_${Date.now()}`, // ใช้ temporary ID
               shelf_number: 1,
-              shelf_name: "ชั้นที่ 1",
+              shelf_name: "ชั้นบน",
               slots: [{ id: `temp_${Date.now() + 1}`, slot_number: 1 }],
             },
           ]);
         }
       } catch (error) {
-        console.error("Error loading fridge data (simulated):", error);
-        // toast.error("เกิดข้อผิดพลาดในการโหลดข้อมูล (จำลอง)"); // Removed toast
+        console.error("Error loading fridge data:", error);
+        const errorMessage = error.response?.data?.message || "เกิดข้อผิดพลาดในการโหลดข้อมูล";
+        toast.error(errorMessage);
+
+        if (error.response?.status === 401) {
+          navigate("/login");
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
     loadFridgeData();
-  }, [id, navigate]);
+  }, [id, BASE_URL, navigate]);
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -148,9 +105,9 @@ function EditFridgeForm() {
   };
 
   const addShelf = () => {
-    const newShelfNumber = shelves.length > 0 ? Math.max(...shelves.map((s) => s.shelf_number)) + 1 : 1;
+    const newShelfNumber = Math.max(...shelves.map((s) => s.shelf_number)) + 1;
     const newShelf = {
-      id: `temp_${Date.now()}`,
+      id: `temp_${Date.now()}`, // ใช้ string เพื่อแยกแยะจาก ID จริง
       shelf_number: newShelfNumber,
       shelf_name: `ชั้นที่ ${newShelfNumber}`,
       slots: [{ id: `temp_${Date.now() + 1}`, slot_number: 1 }],
@@ -160,7 +117,7 @@ function EditFridgeForm() {
 
   const removeShelf = (shelfId) => {
     if (shelves.length <= 1) {
-      console.warn("ต้องมีอย่างน้อย 1 ชั้น"); // Replaced toast with console.warn
+      toast.warning("ต้องมีอย่างน้อย 1 ชั้น");
       return;
     }
     setShelves((prev) => prev.filter((shelf) => shelf.id !== shelfId));
@@ -170,7 +127,7 @@ function EditFridgeForm() {
     setShelves((prev) =>
       prev.map((shelf) => {
         if (shelf.id === shelfId) {
-          const newSlotNumber = shelf.slots.length > 0 ? Math.max(...shelf.slots.map((s) => s.slot_number)) + 1 : 1;
+          const newSlotNumber = Math.max(...shelf.slots.map((s) => s.slot_number)) + 1;
           return {
             ...shelf,
             slots: [...shelf.slots, { id: `temp_${Date.now()}`, slot_number: newSlotNumber }],
@@ -186,7 +143,7 @@ function EditFridgeForm() {
       prev.map((shelf) => {
         if (shelf.id === shelfId) {
           if (shelf.slots.length <= 1) {
-            console.warn("แต่ละชั้นต้องมีอย่างน้อย 1 ช่อง"); // Replaced toast with console.warn
+            toast.warning("แต่ละชั้นต้องมีอย่างน้อย 1 ช่อง");
             return shelf;
           }
           return {
@@ -215,6 +172,7 @@ function EditFridgeForm() {
     }
 
     shelves.forEach((shelf) => {
+      // ตรวจสอบชื่อชั้น
       if (!shelf.shelf_name.trim()) {
         newErrors[`shelf_name_${shelf.id}`] = "กรุณาระบุชื่อชั้น";
       }
@@ -238,28 +196,36 @@ function EditFridgeForm() {
     setIsSaving(true);
 
     try {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
+      const token = localStorage.getItem("token");
       const submitData = {
         ...formData,
         shelves: shelves.map((shelf) => ({
-          id: typeof shelf.id === "number" ? shelf.id : undefined, // Only send numeric IDs
+          // ส่ง ID เฉพาะที่เป็นตัวเลขจริง (จากฐานข้อมูล)
+          ...(typeof shelf.id === "number" && { id: shelf.id }),
           shelf_number: shelf.shelf_number,
           shelf_name: shelf.shelf_name,
           slots: shelf.slots.map((slot) => ({
-            id: typeof slot.id === "number" ? slot.id : undefined, // Only send numeric IDs
+            // ส่ง ID เฉพาะที่เป็นตัวเลขจริง (จากฐานข้อมูล)
+            ...(typeof slot.id === "number" && { id: slot.id }),
             slot_number: slot.slot_number,
           })),
         })),
       };
 
-      console.log("Simulating fridge update:", submitData);
-      console.log("แก้ไขตู้เย็นสำเร็จ (จำลอง)!"); // Replaced toast with console.log
-      // navigate("/fridge-management"); // Optionally navigate after save
+      console.log("Submitting update data:", submitData);
+
+      await axios.put(`${BASE_URL}/api/fridge/updateFridge/${id}`, submitData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      toast.success("แก้ไขตู้เย็นสำเร็จ!");
+      // navigate("/fridge-management");
     } catch (error) {
-      console.error("Error simulating fridge update:", error);
-      // toast.error("เกิดข้อผิดพลาดในการแก้ไข (จำลอง) กรุณาลองใหม่อีกครั้ง"); // Removed toast
+      console.error("Error updating fridge:", error);
+      const errorMessage = error.response?.data?.message || "เกิดข้อผิดพลาดในการแก้ไข กรุณาลองใหม่อีกครั้ง";
+      toast.error(errorMessage);
     } finally {
       setIsSaving(false);
     }
@@ -472,4 +438,3 @@ function EditFridgeForm() {
 }
 
 export default EditFridgeForm;
-

@@ -1,5 +1,6 @@
+// AddFridgeForm.jsx - หน้าเพิ่มตู้เย็นใหม่
 import { useState } from "react";
-// import axios from "axios"; // Removed axios
+import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,14 +9,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Save, Plus, Trash2, Layers, Grid3X3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-// import { toast } from "react-toastify"; // Removed toast
+import { toast } from "react-toastify";
+import { useAuth } from "../contexts/AuthContext";
+
 
 function AddFridgeForm() {
   const navigate = useNavigate();
-  // const API_HOST = import.meta.env.VITE_API_HOST; // Removed backend related variables
-  // const API_PORT = import.meta.env.VITE_API_PORT;
-  // const BASE_URL = `${API_HOST}:${API_PORT}`;
 
+  // อ่านค่า ENV
+  const API_HOST = import.meta.env.VITE_API_HOST;
+  const API_PORT = import.meta.env.VITE_API_PORT;
+  const BASE_URL = `${API_HOST}:${API_PORT}`;
+  const { token } = useAuth();
+
+  // ---------- State หลัก ----------
   const [formData, setFormData] = useState({
     name: "",
     location: "",
@@ -34,75 +41,84 @@ function AddFridgeForm() {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
+  // ---------- Helper เล็ก ๆ ----------
+  // คืนค่าหมายเลขถัดไปโดยดูจาก array ตัวเลข (ถ้า array ว่าง เริ่มที่ 1)
+  const getNextNumber = (numbers) => {
+    if (!numbers || numbers.length === 0) return 1;
+    return Math.max(...numbers) + 1;
+  };
+
+  // ล้าง error ของฟิลด์ที่เพิ่งแก้ไข
+  const clearFieldError = (key) => {
+    setErrors((prev) => (prev[key] ? { ...prev, [key]: "" } : prev));
+  };
+
+  // ---------- Handlers: แบบอ่านง่าย ----------
+  // เปลี่ยนค่าฟอร์มทั่วไป (name/location/description)
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: "" }));
-    }
+    clearFieldError(field);
   };
 
+  // เปลี่ยนชื่อชั้น (ระบุด้วย shelfId)
   const handleShelfNameChange = (shelfId, value) => {
     setShelves((prev) => prev.map((shelf) => (shelf.id === shelfId ? { ...shelf, shelf_name: value } : shelf)));
-    if (errors[`shelf_name_${shelfId}`]) {
-      setErrors((prev) => ({ ...prev, [`shelf_name_${shelfId}`]: "" }));
-    }
+    clearFieldError(`shelf_name_${shelfId}`);
   };
 
+  // เพิ่มชั้นใหม่ (ตั้งเลขชั้น/ชื่อชั้นอัตโนมัติ, ใส่ 1 ช่องเริ่มต้น)
   const addShelf = () => {
-    const newShelfNumber = shelves.length > 0 ? Math.max(...shelves.map((s) => s.shelf_number)) + 1 : 1;
+    const nextShelfNumber = getNextNumber(shelves.map((s) => s.shelf_number));
+    const now = Date.now();
     const newShelf = {
-      id: Date.now(),
-      shelf_number: newShelfNumber,
-      shelf_name: `ชั้นที่ ${newShelfNumber}`,
-      slots: [{ id: Date.now() + 1, slot_number: 1 }],
+      id: now, // ใช้ timestamp เป็น id ง่าย ๆ
+      shelf_number: nextShelfNumber,
+      shelf_name: `ชั้นที่ ${nextShelfNumber}`,
+      slots: [{ id: now + 1, slot_number: 1 }],
     };
     setShelves((prev) => [...prev, newShelf]);
   };
 
+  // ลบชั้นตาม shelfId
   const removeShelf = (shelfId) => {
     setShelves((prev) => prev.filter((shelf) => shelf.id !== shelfId));
   };
 
+  // เพิ่มช่องในชั้นที่กำหนด
   const addSlot = (shelfId) => {
     setShelves((prev) =>
       prev.map((shelf) => {
-        if (shelf.id === shelfId) {
-          const newSlotNumber = shelf.slots.length > 0 ? Math.max(...shelf.slots.map((s) => s.slot_number)) + 1 : 1;
-          return {
-            ...shelf,
-            slots: [...shelf.slots, { id: Date.now(), slot_number: newSlotNumber }],
-          };
-        }
-        return shelf;
+        if (shelf.id !== shelfId) return shelf;
+
+        const nextSlotNumber = getNextNumber(shelf.slots.map((s) => s.slot_number));
+        return {
+          ...shelf,
+          slots: [...shelf.slots, { id: Date.now(), slot_number: nextSlotNumber }],
+        };
       })
     );
   };
 
+  // ลบช่องในชั้นที่กำหนด
   const removeSlot = (shelfId, slotId) => {
     setShelves((prev) =>
       prev.map((shelf) => {
-        if (shelf.id === shelfId) {
-          return {
-            ...shelf,
-            slots: shelf.slots.filter((slot) => slot.id !== slotId),
-          };
-        }
-        return shelf;
+        if (shelf.id !== shelfId) return shelf;
+        return { ...shelf, slots: shelf.slots.filter((slot) => slot.id !== slotId) };
       })
     );
   };
 
+  // ---------- Validation ----------
   const validateForm = () => {
     const newErrors = {};
 
     if (!formData.name.trim()) {
       newErrors.name = "กรุณาระบุชื่อตู้เย็น";
     }
-
     if (!formData.location.trim()) {
       newErrors.location = "กรุณาระบุสถานที่ตั้ง";
     }
-
     if (shelves.length === 0) {
       newErrors.shelves = "ต้องมีอย่างน้อย 1 ชั้น";
     }
@@ -111,7 +127,6 @@ function AddFridgeForm() {
       if (!shelf.shelf_name.trim()) {
         newErrors[`shelf_name_${shelf.id}`] = "กรุณาระบุชื่อชั้น";
       }
-
       if (shelf.slots.length === 0) {
         newErrors[`shelf_${shelf.id}`] = `ชั้นที่ ${shelf.shelf_number} ต้องมีอย่างน้อย 1 ช่อง`;
       }
@@ -121,45 +136,44 @@ function AddFridgeForm() {
     return Object.keys(newErrors).length === 0;
   };
 
+  // ---------- Submit ----------
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setIsLoading(true);
-
     try {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      const submitData = {
+      // จัดรูปแบบ payload ให้ตรงกับ backend
+      const payload = {
         ...formData,
         shelves: shelves.map((shelf) => ({
           shelf_number: shelf.shelf_number,
           shelf_name: shelf.shelf_name,
-          slots: shelf.slots.map((slot) => ({
-            slot_number: slot.slot_number,
-          })),
+          slots: shelf.slots.map((slot) => ({ slot_number: slot.slot_number })),
         })),
       };
 
-      console.log("Simulating fridge creation:", submitData);
-      // toast.success("เพิ่มตู้เย็นสำเร็จ (จำลอง)"); // Replaced toast with console.log
-      console.log("เพิ่มตู้เย็นสำเร็จ (จำลอง)");
+      console.log("Submitting data:", payload);
+
+      await axios.post(`${BASE_URL}/api/fridge/createFridge`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      toast.success("เพิ่มตู้เย็นสำเร็จ");
       navigate("/fridge-management");
-    } catch (error) {
-      console.error("Error simulating form submission:", error);
-      // toast.error("เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง (จำลอง)"); // Replaced toast with console.error
+    } catch (err) {
+      console.error("Error submitting form:", err);
+      const msg = err?.response?.data?.message || "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง";
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getTotalSlots = () => {
-    return shelves.reduce((total, shelf) => total + shelf.slots.length, 0);
-  };
+  // ---------- สรุปจำนวนช่องทั้งหมด ----------
+  const getTotalSlots = () => shelves.reduce((sum, shelf) => sum + shelf.slots.length, 0);
+
 
   return (
     <div className="space-y-6">
@@ -252,9 +266,7 @@ function AddFridgeForm() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold">จัดการชั้นและช่อง</h3>
-            {errors.shelves && (
-              <p className="text-sm text-red-500">{errors.shelves}</p>
-            )}
+            {errors.shelves && <p className="text-sm text-red-500">{errors.shelves}</p>}
           </div>
 
           {shelves.map((shelf) => (
@@ -353,4 +365,3 @@ function AddFridgeForm() {
 }
 
 export default AddFridgeForm;
-

@@ -1,0 +1,45 @@
+import { findAllFridgesSlots,findBookings,createBooking } from "../models/bookingModel.js";
+
+// GET /api/fridges - ดึงข้อมูลตู้เย็นทั้งหมดพร้อมชั้นและช่อง
+export const getFridgesSlots = async (req, res) => {
+  try {
+    const fridges = await findAllFridgesSlots();
+    res.status(200).json(fridges);
+  } catch (error) {
+    console.error("Error in getFridgesSlots:", error);
+    res.status(500).json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูลตู้เย็น" });
+  }
+};
+
+export const getBookings = async (req, res) => {
+  try {
+    const bookings = await findBookings();
+    res.status(200).json(bookings);
+  } catch (error) {
+    console.error("Error in getBookings:", error);
+    res.status(500).json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูลการจอง" });
+  }
+};
+
+
+
+export const createBookingFridge = async (req, res) => {
+  try {
+    const { slot_id, start_time, end_time, note, items } = req.body;
+    const userId = req.user?.id || 1; // สมมติได้จาก token decode
+
+    const booking = await createBooking({
+      user_id: userId,
+      slot_id,
+      start_time,
+      end_time,
+      note,
+      items,
+    });
+
+    res.status(201).json(booking);
+  } catch (error) {
+    console.error("Error in createBookingFridge:", error);
+    res.status(500).json({ message: "เกิดข้อผิดพลาดในการจองตู้เย็น" });
+  }
+};

@@ -4,15 +4,17 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { useNavigate } from "react-router-dom";
-// import axios from "axios"; // Removed axios
-// import { toast } from "react-toastify"; // Removed toast
+import axios from "axios";
+import { toast } from "react-toastify";
+import { useAuth } from "../contexts/AuthContext";
 
 function FridgeManagement() {
   const navigate = useNavigate();
 
-  // const API_HOST = import.meta.env.VITE_API_HOST; // Removed backend related variables
-  // const API_PORT = import.meta.env.VITE_API_PORT;
-  // const BASE_URL = `${API_HOST}:${API_PORT}`;
+  const API_HOST = import.meta.env.VITE_API_HOST;
+  const API_PORT = import.meta.env.VITE_API_PORT;
+  const BASE_URL = `${API_HOST}:${API_PORT}`;
+  const { token } = useAuth();
 
   const [fridges, setFridges] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -20,59 +22,48 @@ function FridgeManagement() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedFridge, setSelectedFridge] = useState(null);
 
-  // Mock data for fridges
-  const mockFridges = [
-    {
-      id: "fridge-1",
-      name: "ตู้เย็นส่วนกลาง 1",
-      location: "อาคาร A ชั้น 1",
-      description: "ตู้เย็นสำหรับเก็บอาหารและเครื่องดื่มทั่วไป",
-      shelves: 2,
-      totalSlots: 5,
-      availableSlots: 3,
-      created_at: "2025-09-01T10:00:00Z",
-    },
-    {
-      id: "fridge-2",
-      name: "ตู้เย็นส่วนกลาง 2",
-      location: "อาคาร B ชั้น 2",
-      description: "ตู้เย็นสำหรับเก็บของสด",
-      shelves: 1,
-      totalSlots: 4,
-      availableSlots: 1,
-      created_at: "2025-09-05T14:30:00Z",
-    },
-    {
-      id: "fridge-3",
-      name: "ตู้เย็นส่วนกลาง 3",
-      location: "อาคาร C ชั้น 3",
-      description: "ตู้เย็นสำหรับเก็บเครื่องดื่ม",
-      shelves: 3,
-      totalSlots: 9,
-      availableSlots: 9,
-      created_at: "2025-09-10T08:00:00Z",
-    },
-  ];
-
-  // ดึงข้อมูลตู้เย็นทั้งหมด (จำลอง)
+  // ดึงข้อมูลตู้เย็นทั้งหมด
   const fetchFridges = async () => {
+    setTimeout(() => setIsLoading(false), 500);
     try {
       setIsLoading(true);
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // In a real app, you'd fetch from an API and process the data
-      // For now, we use mock data directly
-      setFridges(mockFridges);
+      const response = await axios.get(`${BASE_URL}/api/fridge`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // console.log(response.data);
+
+      const fridgeData = response.data.map((fridge) => {
+        const totalShelves = fridge._count?.shelves || 0;
+        const allSlots = fridge.shelves?.flatMap((shelf) => shelf.slots) || [];
+        const totalSlots = allSlots.length;
+        const availableSlots = allSlots.filter((slot) => slot.is_disabled === false).length;
+
+        return {
+          id: fridge.id,
+          name: fridge.name,
+          location: fridge.location,
+          description: fridge.description,
+          shelves: totalShelves,
+          totalSlots,
+          availableSlots,
+          created_at: fridge.created_at,
+        };
+      });
+
+      setFridges(fridgeData);
     } catch (error) {
-      console.error("Error fetching fridges (simulated):", error);
-      // toast.error("เกิดข้อผิดพลาดในการดึงข้อมูล (จำลอง)"); // Removed toast
-    } finally {
-      setIsLoading(false);
+      console.error("Error fetching fridges:", error);
+      const errorMessage = error.response?.data?.message || "เกิดข้อผิดพลาดในการดึงข้อมูล";
+      toast.error(errorMessage);
+      if (error.response?.status === 401) {
+        navigate("/login");
+      }
     }
   };
 
-  // ลบตู้เย็น (จำลอง)
+  // ลบตู้เย็น - แก้ไขให้รับ fridge object แทน
   const handleDeleteFridge = (fridge) => {
     setSelectedFridge(fridge);
     setIsDeleteModalOpen(true);
@@ -82,16 +73,17 @@ function FridgeManagement() {
     if (!selectedFridge) return;
     try {
       setDeleteLoading(selectedFridge.id);
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // Simulate deletion from the state
-      setFridges((prevFridges) => prevFridges.filter((f) => f.id !== selectedFridge.id));
-      console.log(`Fridge ${selectedFridge.name} deleted successfully (simulated)!`); // Replaced toast with console.log
-      // toast.success("ลบตู้เย็นสำเร็จ (จำลอง)"); // Removed toast
+      await axios.delete(`${BASE_URL}/api/fridge/deleteFridge/${selectedFridge.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      toast.success("ลบตู้เย็นสำเร็จ");
+      await fetchFridges();
     } catch (error) {
-      console.error("Error simulating fridge deletion:", error);
-      // toast.error("เกิดข้อผิดพลาดในการลบ (จำลอง)"); // Removed toast
+      console.error("Error deleting fridge:", error);
+      const errorMessage = error.response?.data?.message || "เกิดข้อผิดพลาดในการลบ";
+      toast.error(errorMessage);
     } finally {
       setDeleteLoading(null);
       setIsDeleteModalOpen(false);
@@ -240,7 +232,7 @@ function FridgeManagement() {
                       variant="ghost"
                       size="sm"
                       className="text-red-600 hover:text-red-700"
-                      onClick={() => handleDeleteFridge(fridge)}
+                      onClick={() => handleDeleteFridge(fridge)} // ส่ง fridge object แทน
                       disabled={deleteLoading === fridge.id}
                       title="ลบ"
                     >
@@ -336,4 +328,3 @@ function FridgeManagement() {
 }
 
 export default FridgeManagement;
-
