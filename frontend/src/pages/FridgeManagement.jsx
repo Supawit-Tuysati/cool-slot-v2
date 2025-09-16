@@ -251,8 +251,7 @@ function FridgeManagement() {
                   {fridge.location}
                 </div>
 
-                {fridge.description && <p className="text-sm text-gray-600 line-clamp-2">{fridge.description}</p>}
-
+                <p className="text-sm text-gray-600 line-clamp-2">{fridge.description || "ไม่มีรายละเอียด"}</p>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>การใช้งาน</span>
@@ -283,7 +282,7 @@ function FridgeManagement() {
                     </Badge>
                   </div>
                   <Button variant="outline" size="sm" onClick={() => navigate(`/edit-fridge/${fridge.id}`)}>
-                    รายละเอียด
+                    แก้ไขตู้เย็น
                   </Button>
                 </div>
 

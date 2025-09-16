@@ -114,184 +114,137 @@ export const createFridgeShelves = async ({ name, location, description, created
   });
 };
 
-// ฟังก์ชันสำหรับจัดการ slots ในแต่ละ shelf
-const updateSlotsForShelf = async (tx, shelfId, incomingSlots, updated_by) => {
-  // ดึงข้อมูล slots ปัจจุบัน
-  const currentSlots = await tx.fridgeSlot.findMany({
-    where: {
-      shelf_id: shelfId,
-    },
-  });
-
-  const existingSlotsMap = new Map(currentSlots.map((slot) => [slot.id, slot]));
-
-  // แยกประเภท slots
-  const slotsToUpdate = incomingSlots.filter(
-    (slot) => slot.id && typeof slot.id === "number" && existingSlotsMap.has(slot.id)
-  );
-
-  const slotsToCreate = incomingSlots.filter(
-    (slot) => !slot.id || typeof slot.id !== "number" || !existingSlotsMap.has(slot.id)
-  );
-
-  const incomingSlotIds = new Set(slotsToUpdate.map((slot) => slot.id));
-
-  // อัปเดต slots ที่มีอยู่
-  for (const slotData of slotsToUpdate) {
-    await tx.fridgeSlot.update({
-      where: { id: slotData.id },
-      data: {
-        slot_number: slotData.slot_number,
-        updated_by,
-      },
-    });
-  }
-
-  // สร้าง slots ใหม่
-  for (const slotData of slotsToCreate) {
-    await tx.fridgeSlot.create({
-      data: {
-        shelf_id: shelfId,
-        slot_number: slotData.slot_number,
-        status: "available",
-        created_by: updated_by,
-      },
-    });
-  }
-
-  // Soft delete slots ที่ไม่มีใน request
-  const slotsToDelete = currentSlots.filter((slot) => !incomingSlotIds.has(slot.id));
-  for (const slot of slotsToDelete) {
-    await tx.fridgeSlot.update({
-      where: { id: slot.id },
-    });
-  }
-};
-
 export const updateFridgeShelves = async ({ id, name, location, description, updated_by, shelves }) => {
   return await prisma.$transaction(async (tx) => {
-    // 1. อัพเดทข้อมูลพื้นฐานของตู้เย็น
-    const fridge = await tx.fridge.update({
+    // 1. อัปเดตข้อมูลตู้เย็น
+    await tx.fridge.update({
       where: { id },
-      data: {
-        name,
-        location,
-        description,
-        updated_by,
-      },
+      data: { name, location, description, updated_by },
     });
 
-    if (shelves && Array.isArray(shelves)) {
+    if (Array.isArray(shelves)) {
       // 2. ดึงข้อมูลชั้นและช่องปัจจุบัน
       const currentShelves = await tx.fridgeShelf.findMany({
-        where: {
-          fridge_id: id,
-        },
-        include: {
-          slots: true,
-        },
+        where: { fridge_id: id },
+        include: { slots: true },
       });
 
-      // 3. แยกประเภทการดำเนินการสำหรับชั้น
-      const existingShelvesMap = new Map(currentShelves.map((shelf) => [shelf.id, shelf]));
+      // 3. แยกชั้นที่ต้องอัปเดตและสร้างใหม่
+      const currentShelfIds = currentShelves.map((shelf) => shelf.id);
+      const requestShelfIds = shelves.filter((shelf) => shelf.id).map((shelf) => shelf.id);
 
-      // แยกแยะ shelf ที่มีอยู่กับ shelf ใหม่อย่างชัดเจน
-      const shelvesToUpdate = shelves.filter(
-        (shelf) => shelf.id && typeof shelf.id === "number" && existingShelvesMap.has(shelf.id) // ต้องมีในฐานข้อมูลจริง
-      );
-
-      const shelvesToCreate = shelves.filter(
-        (shelf) => !shelf.id || typeof shelf.id !== "number" || !existingShelvesMap.has(shelf.id) // ไม่มีในฐานข้อมูล
-      );
-
-      const incomingShelfIds = new Set(shelvesToUpdate.map((shelf) => shelf.id));
-
-      // console.log(`Shelves to update: ${shelvesToUpdate.length}`);
-      // console.log(`Shelves to create: ${shelvesToCreate.length}`);
-
-      // 4. อัพเดทชั้นที่มีอยู่
-      for (const shelfData of shelvesToUpdate) {
-        console.log(`Updating shelf ID: ${shelfData.id}`);
-
-        await tx.fridgeShelf.update({
-          where: { id: shelfData.id },
-          data: {
-            shelf_number: shelfData.shelf_number,
-            shelf_name: shelfData.shelf_name,
-            updated_by,
-          },
-        });
-
-        // จัดการช่องในชั้นนี้
-        await updateSlotsForShelf(tx, shelfData.id, shelfData.slots || [], updated_by);
-      }
-
-      // 5. สร้างชั้นใหม่
-      for (const shelfData of shelvesToCreate) {
-        console.log(`Creating new shelf: ${shelfData.shelf_name}`);
-
-        const newShelf = await tx.fridgeShelf.create({
-          data: {
-            fridge_id: id,
-            shelf_number: shelfData.shelf_number,
-            shelf_name: shelfData.shelf_name,
-            created_by: updated_by,
-          },
-        });
-
-        // สร้างช่องใหม่สำหรับชั้นใหม่
-        if (shelfData.slots && shelfData.slots.length > 0) {
-          const slotPromises = shelfData.slots.map((slotData) =>
-            tx.fridgeSlot.create({
-              data: {
-                shelf_id: newShelf.id,
-                slot_number: slotData.slot_number,
-                status: "available",
-                created_by: updated_by,
-              },
-            })
-          );
-          await Promise.all(slotPromises);
+      // 4. อัปเดตชั้นที่มีอยู่
+      for (const shelf of shelves) {
+        if (shelf.id && currentShelfIds.includes(shelf.id)) {
+          // อัปเดตข้อมูลชั้น
+          await tx.fridgeShelf.update({
+            where: { id: shelf.id },
+            data: {
+              shelf_number: shelf.shelf_number,
+              shelf_name: shelf.shelf_name,
+              updated_by,
+            },
+          });
+          // อัปเดตช่องในชั้นนี้
+          await updateSlotsForShelf(tx, shelf.id, shelf.slots || [], updated_by);
         }
       }
 
-      // 6. Soft delete ชั้นที่ไม่มีใน request
-      const shelvesToDelete = currentShelves.filter((shelf) => !incomingShelfIds.has(shelf.id));
+      // 5. สร้างชั้นใหม่
+      for (const shelf of shelves) {
+        if (!shelf.id || !currentShelfIds.includes(shelf.id)) {
+          const newShelf = await tx.fridgeShelf.create({
+            data: {
+              fridge_id: id,
+              shelf_number: shelf.shelf_number,
+              shelf_name: shelf.shelf_name,
+              created_by: updated_by,
+            },
+          });
+          // สร้างช่องใหม่ในชั้นนี้
+          if (Array.isArray(shelf.slots)) {
+            for (const slot of shelf.slots) {
+              await tx.fridgeSlot.create({
+                data: {
+                  shelf_id: newShelf.id,
+                  slot_number: slot.slot_number,
+                  created_by: updated_by,
+                },
+              });
+            }
+          }
+        }
+      }
 
-      console.log(`Shelves to delete: ${shelvesToDelete.length}`);
-
-      for (const shelf of shelvesToDelete) {
-        console.log(`Soft deleting shelf ID: ${shelf.id}`);
-
-        // ลบช่องทั้งหมดในชั้นนี้ก่อน
-        await tx.fridgeSlot.updateMany({
-          where: { shelf_id: shelf.id },
-        });
-
-        // แล้วลบชั้น
-        await tx.fridgeShelf.update({
-          where: { id: shelf.id },
-        });
+      // 6. ลบชั้นที่ไม่มีใน request (ถ้าช่องทุกตัว is_disabled == 0)
+      for (const shelf of currentShelves) {
+        if (!requestShelfIds.includes(shelf.id)) {
+          // ดึงช่องทั้งหมดในชั้นนี้
+          const slots = await tx.fridgeSlot.findMany({ where: { shelf_id: shelf.id } });
+          // เช็คว่าช่องทุกตัว is_disabled == 0
+          const canDeleteShelf = slots.every((slot) => slot.is_disabled === false);
+          if (canDeleteShelf) {
+            // ลบช่องทั้งหมด
+            await tx.fridgeSlot.deleteMany({ where: { shelf_id: shelf.id } });
+            // ลบชั้นนี้
+            await tx.fridgeShelf.delete({ where: { id: shelf.id } });
+          }
+        }
       }
     }
 
-    // 7. ดึงข้อมูลกลับมาพร้อมชั้นและช่อง
-    const fridgeWithShelves = await tx.fridge.findUnique({
+    // 7. ดึงข้อมูลกลับ
+    return await tx.fridge.findUnique({
       where: { id },
       include: {
         shelves: {
-          include: {
-            slots: {
-              orderBy: { slot_number: "asc" },
-            },
-          },
+          include: { slots: { orderBy: { slot_number: "asc" } } },
           orderBy: { shelf_number: "asc" },
         },
       },
     });
-
-    return fridgeWithShelves;
   });
+};
+
+// ฟังก์ชันอัปเดตช่องในแต่ละชั้น
+const updateSlotsForShelf = async (tx, shelfId, slots, updated_by) => {
+  // 1. ดึงข้อมูลช่องปัจจุบัน
+  const currentSlots = await tx.fridgeSlot.findMany({ where: { shelf_id: shelfId } });
+  const currentSlotIds = currentSlots.map((slot) => slot.id);
+  const requestSlotIds = slots.filter((slot) => slot.id).map((slot) => slot.id);
+
+  // 2. อัปเดตช่องที่มีอยู่
+  for (const slot of slots) {
+    if (slot.id && currentSlotIds.includes(slot.id)) {
+      await tx.fridgeSlot.update({
+        where: { id: slot.id },
+        data: {
+          slot_number: slot.slot_number,
+          updated_by,
+        },
+      });
+    }
+  }
+
+  // 3. สร้างช่องใหม่
+  for (const slot of slots) {
+    if (!slot.id || !currentSlotIds.includes(slot.id)) {
+      await tx.fridgeSlot.create({
+        data: {
+          shelf_id: shelfId,
+          slot_number: slot.slot_number,
+          created_by: updated_by,
+        },
+      });
+    }
+  }
+
+  // 4. ลบช่องที่ไม่มีใน request (ถ้า is_disabled == 0)
+  for (const slot of currentSlots) {
+    if (!requestSlotIds.includes(slot.id) && slot.is_disabled === false) {
+      await tx.fridgeSlot.delete({ where: { id: slot.id } });
+    }
+  }
 };
 
 export const deleteFridge = async (id) => {
