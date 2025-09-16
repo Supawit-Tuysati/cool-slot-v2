@@ -5,11 +5,12 @@ import {
   updateFridgeShelves,
   findFridgeShelves,
   deleteFridge,
+  checkBookingsSlot
 } from "../models/fridgeModel.js";
 
 export const getFridges = async (req, res) => {
   try {
-    const fridges = await findAllFridges();
+    const fridges = await checkBookingsSlot();
     res.json(fridges);
   } catch (error) {
     console.error("getFridges error:", error);
@@ -64,7 +65,6 @@ export const createFridgeController = async (req, res) => {
     }
 
     console.log("shelves to create:", shelves);
-    
 
     const fridge = await createFridgeShelves({
       name,

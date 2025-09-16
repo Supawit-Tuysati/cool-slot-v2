@@ -252,3 +252,44 @@ export const deleteFridge = async (id) => {
     where: { id },
   });
 };
+
+export const checkBookingsSlot = async () => {
+  const allFridges = await findAllFridges();
+  const now = new Date();
+
+  // เก็บ id ของช่องที่จะเปิดกลับ
+  const slotsToUpdate = [];
+
+  for (const fridge of allFridges) {
+    for (const shelf of fridge.shelves) {
+      for (const slot of shelf.slots) {
+        // ดึง bookings ของช่องนี้
+        const slotBookings = await prisma.booking.findMany({
+          where: { slot_id: slot.id },
+          select: { id: true, end_time: true, cancelled_at: true },
+        });
+
+        // คัดเอาเฉพาะ bookings ที่ยัง active
+        const activeBookings = slotBookings.filter(
+          (booking) => booking.cancelled_at === null && new Date(booking.end_time) > now
+        );
+
+        // ถ้าไม่มี booking ที่ active และช่องยังถูกปิด → เก็บ id
+        if (activeBookings.length === 0) {
+          slotsToUpdate.push(slot.id);
+          slot.is_disabled = false; // sync object ที่ return ออกไป
+        }
+      }
+    }
+  }
+
+  // อัพเดตทีเดียว
+  if (slotsToUpdate.length > 0) {
+    await prisma.fridgeSlot.updateMany({
+      where: { id: { in: slotsToUpdate } },
+      data: { is_disabled: false },
+    });
+  }
+
+  return allFridges;
+};
