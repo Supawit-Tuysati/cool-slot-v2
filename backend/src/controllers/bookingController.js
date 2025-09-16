@@ -26,7 +26,7 @@ export const getBookings = async (req, res) => {
 export const createBookingFridge = async (req, res) => {
   try {
     const { slot_id, start_time, end_time, note, items } = req.body;
-    const userId = req.user?.id || 1; // สมมติได้จาก token decode
+    const userId = req.user.id // สมมติได้จาก token decode
 
     const booking = await createBooking({
       user_id: userId,

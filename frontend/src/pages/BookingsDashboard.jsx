@@ -9,12 +9,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Badge } from "../components/ui/badge";
 import { Input } from "../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import axios from "axios";
+import { useAuth } from "../contexts/AuthContext";
 
 function BookingsDashboard() {
   const navigate = useNavigate();
-  // const API_HOST = import.meta.env.VITE_API_HOST; // Removed backend related variables
-  // const API_PORT = import.meta.env.VITE_API_PORT;
-  // const BASE_URL = `${API_HOST}:${API_PORT}`;
+  const { token } = useAuth();
+  const API_HOST = import.meta.env.VITE_API_HOST; // Removed backend related variables
+  const API_PORT = import.meta.env.VITE_API_PORT;
+  const BASE_URL = `${API_HOST}:${API_PORT}`;
 
   const [bookings, setBookings] = useState([]);
   const [statusFilter, setStatusFilter] = useState("all");
@@ -50,71 +53,42 @@ function BookingsDashboard() {
     }
   };
 
-  // Mock data for bookings
-  const mockBookings = [
-    {
-      id: "b1",
-      title: "ตู้เย็นส่วนกลาง 1 - ชั้นที่ 1 ช่อง 1",
-      fridgeName: "ตู้เย็นส่วนกลาง 1",
-      shelfName: "ชั้นที่ 1",
-      slotNumber: 1,
-      user: "สมชาย ใจดี",
-      userName: "สมชาย ใจดี",
-      start_time: "2025-09-10T10:00:00Z",
-      end_time: "2025-09-13T12:00:00Z",
-      items: [{ name: "ข้าวกล่อง", quantity: 1 }],
-      originalStatus: "booked",
-    },
-    {
-      id: "b2",
-      title: "ตู้เย็นส่วนกลาง 1 - ชั้นที่ 1 ช่อง 3",
-      fridgeName: "ตู้เย็นส่วนกลาง 1",
-      shelfName: "ชั้นที่ 1",
-      slotNumber: 3,
-      user: "สมหญิง รักสะอาด",
-      userName: "สมหญิง รักสะอาด",
-      start_time: "2025-09-12T14:00:00Z",
-      end_time: "2025-09-13T16:00:00Z",
-      items: [{ name: "น้ำผลไม้", quantity: 2 }],
-      originalStatus: "booked",
-    },
-    {
-      id: "b3",
-      title: "ตู้เย็นส่วนกลาง 2 - ชั้นที่ 1 ช่อง 1",
-      fridgeName: "ตู้เย็นส่วนกลาง 2",
-      shelfName: "ชั้นที่ 1",
-      slotNumber: 1,
-      user: "มานะ พากเพียร",
-      userName: "มานะ พากเพียร",
-      start_time: "2025-09-01T08:00:00Z",
-      end_time: "2025-09-02T09:00:00Z",
-      items: [{ name: "นม", quantity: 1, note: "หมดอายุแล้ว" }],
-      originalStatus: "booked",
-    },
-    {
-      id: "b4",
-      title: "ตู้เย็นส่วนกลาง 1 - ชั้นที่ 2 ช่อง 2",
-      fridgeName: "ตู้เย็นส่วนกลาง 1",
-      shelfName: "ชั้นที่ 2",
-      slotNumber: 2,
-      user: "สมชาย ใจดี",
-      userName: "สมชาย ใจดี",
-      start_time: "2025-09-05T11:00:00Z",
-      end_time: "2025-09-05T13:00:00Z",
-      items: [{ name: "แซนด์วิช", quantity: 1 }],
-      originalStatus: "cancelled",
-    },
-  ];
-
   const fetchBookings = async () => {
     try {
       setIsLoading(true);
-      // Simulate API call delay
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      const processedBookings = mockBookings.map((booking) => ({
+      // เปลี่ยน endpoint ให้ตรงกับข้อมูลที่แนบมา
+      const { data } = await axios.get(`${BASE_URL}/api/booking/list`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      // ดึง bookings จากข้อมูล nested
+      const bookings = [];
+      data.forEach((fridge) => {
+        fridge.shelves.forEach((shelf) => {
+          shelf.slots.forEach((slot) => {
+            slot.bookings.forEach((booking) => {
+              bookings.push({
+                ...booking,
+                id: booking.id,
+                title: `${fridge.name} / ${shelf.shelf_name} / ช่อง ${slot.slot_number}`,
+                user: booking.user?.name || "-",
+                start_time: booking.start_time,
+                end_time: booking.end_time,
+                items: booking.items,
+                originalStatus: booking.cancelled_at ? "cancelled" : "booked",
+              });
+            });
+          });
+        });
+      });
+
+      const processedBookings = bookings.map((booking) => ({
         ...booking,
-        date: booking.start_time ? new Date(booking.start_time).toLocaleDateString() : "-",
+        date: booking.start_time,
         time:
           booking.start_time && booking.end_time
             ? `${new Date(booking.start_time).toLocaleTimeString([], {
@@ -138,7 +112,6 @@ function BookingsDashboard() {
       setBookings(processedBookings);
     } catch (error) {
       console.error("Error fetching bookings:", error);
-      // toast.error("เกิดข้อผิดพลาดในการโหลดข้อมูล"); // Removed toast
     } finally {
       setIsLoading(false);
     }
@@ -181,7 +154,9 @@ function BookingsDashboard() {
       // Simulate success
       console.log(`Booking ${id} cancelled successfully (simulated)!`);
       // toast.success("ยกเลิกการจองเรียบร้อย (จำลอง)"); // Removed toast
-      setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: "cancelled", originalStatus: "cancelled" } : b)));
+      setBookings((prev) =>
+        prev.map((b) => (b.id === id ? { ...b, status: "cancelled", originalStatus: "cancelled" } : b))
+      );
     } catch (err) {
       console.error("Error simulating cancellation:", err);
       // toast.error("ยกเลิกการจองไม่สำเร็จ (จำลอง)"); // Removed toast
@@ -202,12 +177,7 @@ function BookingsDashboard() {
             <Plus size={16} />
             จองช่องใหม่
           </Button>
-          <Button 
-            onClick={fetchBookings} 
-            disabled={isLoading} 
-            variant="outline"
-            className="flex items-center gap-2"
-          >
+          <Button onClick={fetchBookings} disabled={isLoading} variant="outline" className="flex items-center gap-2">
             <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
             รีเฟรช
           </Button>
@@ -470,4 +440,3 @@ function BookingsDashboard() {
 }
 
 export default BookingsDashboard;
-
