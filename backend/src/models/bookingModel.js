@@ -1,8 +1,9 @@
 import prisma from "../../prisma/client.js";
 
 // ดึงข้อมูลตู้เย็นพร้อมชั้นและช่อง
-export const findAllFridgesSlots = async () => {
+export const findAllFridgesSlots = async (id) => {
   return prisma.fridge.findMany({
+    where: { id },
     include: {
       shelves: {
         include: {
@@ -47,6 +48,23 @@ export const findBookings = async () => {
               },
             },
           },
+        },
+      },
+    },
+  });
+};
+
+
+
+export const findBooking = async (id) => {
+  return prisma.booking.findUnique({
+    where: { id },
+    include: {
+      items: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
         },
       },
     },

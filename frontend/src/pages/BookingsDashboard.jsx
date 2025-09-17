@@ -1,6 +1,18 @@
 import React, { useEffect, useMemo, useState } from "react";
 // import axios from "axios"; // Removed axios
-import { AlertCircle, Edit, Clock, Eye, Package, User, XCircle, RefreshCw, Refrigerator, CheckCircle, Plus } from "lucide-react";
+import {
+  AlertCircle,
+  Edit,
+  Clock,
+  Eye,
+  Package,
+  User,
+  XCircle,
+  RefreshCw,
+  Refrigerator,
+  CheckCircle,
+  Plus,
+} from "lucide-react";
 // import { toast } from "react-toastify"; // Removed toast
 import { useNavigate } from "react-router-dom";
 
@@ -59,7 +71,7 @@ function BookingsDashboard() {
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       // เปลี่ยน endpoint ให้ตรงกับข้อมูลที่แนบมา
-      const { data } = await axios.get(`${BASE_URL}/api/booking/list`, {
+      const { data } = await axios.get(`${BASE_URL}/api/booking/listBookings`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -73,8 +85,9 @@ function BookingsDashboard() {
             slot.bookings.forEach((booking) => {
               bookings.push({
                 ...booking,
+                fridge_id: fridge.id,
                 id: booking.id,
-                title: `${fridge.name} / ${shelf.shelf_name} / ช่อง ${slot.slot_number}`,
+                title: fridge.name,
                 user: booking.user?.name || "-",
                 start_time: booking.start_time,
                 end_time: booking.end_time,
@@ -173,7 +186,7 @@ function BookingsDashboard() {
           <p className="text-gray-600">จัดการและติดตามการจองช่องเก็บของในตู้เย็น</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => navigate("/add-booking")} className="flex items-center gap-2">
+          <Button onClick={() => navigate("/booking-fridge")} className="flex items-center gap-2">
             <Plus size={16} />
             จองช่องใหม่
           </Button>
@@ -294,11 +307,12 @@ function BookingsDashboard() {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ตำแหน่ง</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ตู้</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ผู้จอง</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">วัน—เวลาจอง</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">วัน—เวลาหมดอายุ</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">สิ่งของ</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">รายละเอียด</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">สถานะ</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">การจัดการ</th>
                 </tr>
@@ -340,11 +354,19 @@ function BookingsDashboard() {
                         <div className="flex items-center">
                           <Clock size={16} className="text-gray-400 mr-2" />
                           <span className="text-sm text-gray-900">
-                            {booking.start_time
-                              ? `${new Date(booking.start_time).toLocaleDateString()} ${new Date(
-                                  booking.start_time
-                                ).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
-                              : "-"}
+                            {booking.start_time ? (
+                              <>
+                                <div>{new Date(booking.start_time).toLocaleDateString("th-TH")}</div>
+                                <div>
+                                  {new Date(booking.start_time).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </div>
+                              </>
+                            ) : (
+                              "-"
+                            )}
                           </span>
                         </div>
                       </td>
@@ -354,11 +376,19 @@ function BookingsDashboard() {
                         <div className="flex items-center">
                           <Clock size={16} className="text-gray-400 mr-2" />
                           <span className="text-sm text-gray-900">
-                            {booking.end_time
-                              ? `${new Date(booking.end_time).toLocaleDateString()} ${new Date(
-                                  booking.end_time
-                                ).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
-                              : "-"}
+                            {booking.end_time ? (
+                              <>
+                                <div>{new Date(booking.end_time).toLocaleDateString("th-TH")}</div>
+                                <div>
+                                  {new Date(booking.end_time).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </div>
+                              </>
+                            ) : (
+                              "-"
+                            )}
                           </span>
                         </div>
                       </td>
@@ -372,8 +402,22 @@ function BookingsDashboard() {
                                 <Package size={12} className="mr-1 text-gray-400" />
                                 <span className="text-gray-900">
                                   {item.name} {item.quantity ? `(${item.quantity})` : ""}
-                                  {item.note ? ` - ${item.note}` : ""}
                                 </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-gray-500">-</span>
+                        )}
+                      </td>
+
+                      {/* รายละเอียด */}
+                      <td className="px-6 py-4">
+                        {booking.items && booking.items.length > 0 ? (
+                          <div className="space-y-1">
+                            {booking.items.map((item, idx) => (
+                              <div key={idx} className="flex items-center text-sm">
+                                <span className="text-gray-900">{item.note ? ` ${item.note}` : "-"}</span>
                               </div>
                             ))}
                           </div>
@@ -384,19 +428,21 @@ function BookingsDashboard() {
 
                       {/* สถานะ */}
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            booking.status === "near-expired"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : booking.status === "expired"
-                              ? "bg-red-100 text-red-800"
-                              : booking.status === "cancelled"
-                              ? "bg-gray-100 text-gray-800"
-                              : "bg-green-100 text-green-800"
-                          }`}
-                        >
-                          {getBadge(booking.status)}
-                        </span>
+                        <div className="flex justify-center">
+                          <span
+                            className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              booking.status === "near-expired"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : booking.status === "expired"
+                                ? "bg-red-100 text-red-800"
+                                : booking.status === "cancelled"
+                                ? "bg-gray-100 text-gray-800"
+                                : "bg-green-100 text-green-800"
+                            }`}
+                          >
+                            {getBadge(booking.status)}
+                          </span>
+                        </div>
                       </td>
 
                       {/* การจัดการ */}
@@ -405,7 +451,7 @@ function BookingsDashboard() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => navigate(`/bookings/edit/${booking.id}`)}
+                            onClick={() => navigate(`/edit-booking/${booking.fridge_id}`, { state: { booking_id: booking.id } })}
                             className="text-blue-600 hover:text-blue-900"
                           >
                             <Edit size={16} />

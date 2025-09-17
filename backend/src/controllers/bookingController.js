@@ -1,9 +1,10 @@
-import { findAllFridgesSlots,findBookings,createBooking } from "../models/bookingModel.js";
+import { findAllFridgesSlots, findBookings,findBooking, createBooking } from "../models/bookingModel.js";
 
 // GET /api/fridges - ดึงข้อมูลตู้เย็นทั้งหมดพร้อมชั้นและช่อง
 export const getFridgesSlots = async (req, res) => {
   try {
-    const fridges = await findAllFridgesSlots();
+    const id = parseInt(req.params.id, 10);
+    const fridges = await findAllFridgesSlots(id);
     res.status(200).json(fridges);
   } catch (error) {
     console.error("Error in getFridgesSlots:", error);
@@ -14,6 +15,7 @@ export const getFridgesSlots = async (req, res) => {
 export const getBookings = async (req, res) => {
   try {
     const bookings = await findBookings();
+
     res.status(200).json(bookings);
   } catch (error) {
     console.error("Error in getBookings:", error);
@@ -21,12 +23,22 @@ export const getBookings = async (req, res) => {
   }
 };
 
+export const getDataBookings = async (req, res) => {
+  try {
+        const id = parseInt(req.params.id, 10);
+    const bookings = await findBooking(id);
 
+    res.status(200).json(bookings);
+  } catch (error) {
+    console.error("Error in getBookings:", error);
+    res.status(500).json({ message: "เกิดข้อผิดพลาดในการดึงข้อมูลการจอง" });
+  }
+};
 
 export const createBookingFridge = async (req, res) => {
   try {
     const { slot_id, start_time, end_time, note, items } = req.body;
-    const userId = req.user.id // สมมติได้จาก token decode
+    const userId = req.user.id; // สมมติได้จาก token decode
 
     const booking = await createBooking({
       user_id: userId,

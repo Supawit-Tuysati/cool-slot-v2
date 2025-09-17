@@ -8,6 +8,7 @@ import "react-toastify/dist/ReactToastify.css";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import FridgeManagement from "./pages/FridgeManagement";
+import FridgeAll from "./pages/BookingFridge";
 import FridgeForm from "./pages/FridgeForm";
 import FridgeFormEdit from "./pages/FridgeFormEdit";
 import BookingsDashboard from "./pages/BookingsDashboard";
@@ -60,7 +61,7 @@ function App() {
             }
           />
           <Route
-            path="/add-booking"
+            path="/add-booking/:fridge_id"
             element={
               <ProtectedRoute>
                 <MainLayout>
@@ -71,7 +72,7 @@ function App() {
           />
 
           <Route
-            path="/edit-booking/:id"
+            path="/edit-booking/:fridge_id"
             element={
               <ProtectedRoute>
                 <MainLayout>
@@ -80,7 +81,16 @@ function App() {
               </ProtectedRoute>
             }
           />
-
+             <Route
+            path="/booking-fridge"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <FridgeAll />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/fridge-management"
             element={

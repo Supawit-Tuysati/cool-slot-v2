@@ -8,13 +8,15 @@ import { Textarea } from "../components/ui/textarea";
 import { Badge } from "../components/ui/badge";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams  } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+
 
 // ฟอร์มจองช่องเก็บของในตู้เย็น
 function BookingForm() {
   const navigate = useNavigate();
    const { token } = useAuth();
+   const { fridge_id } = useParams();
   // กำหนด URL สำหรับเรียก API
   const API_HOST = import.meta.env.VITE_API_HOST;
   const API_PORT = import.meta.env.VITE_API_PORT;
@@ -36,7 +38,7 @@ function BookingForm() {
   // โหลดข้อมูลตู้เย็นจาก API
   const loadFridges = async () => {
     try {
-      const res = await axios.get(`${BASE_URL}/api/booking`, {
+      const res = await axios.get(`${BASE_URL}/api/booking/getFridge/${fridge_id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setFridges(res.data);
@@ -137,7 +139,7 @@ function BookingForm() {
       };
 
       await axios.post(`${BASE_URL}/api/booking/createBookingFridge`, submitData, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: { Authorization: `Bearer ${token}` },
       });
       loadFridges();
       toast.success("จองสำเร็จ!");
@@ -153,12 +155,12 @@ function BookingForm() {
     <div className="space-y-6">
       {/* ส่วนหัว */}
       <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" onClick={() => navigate("/bookings")}>
+        <Button variant="outline" size="sm" onClick={() => navigate("/booking-fridge")}>
           <ArrowLeft className="w-4 h-4" /> กลับ
         </Button>
         <div>
           <h1 className="text-2xl font-bold">จองช่องเก็บของ</h1>
-          <p className="text-gray-600">เลือกตู้เย็นและช่องที่ต้องการจอง</p>
+          <p className="text-gray-600">เลือกช่องที่ต้องการจอง</p>
         </div>
       </div>
 
@@ -199,7 +201,6 @@ function BookingForm() {
                             key={slot.id}
                             type="button"
                             onClick={() => chooseSlot(fridge, shelf, slot)}
-                            disabled={slot.is_disabled === "booked"}
                             className={
                               slot.is_disabled === false
                                 ? selectedSlot?.id === slot.id
