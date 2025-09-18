@@ -1,15 +1,18 @@
 body {
   margin: 0;
-  font-family: 'Noto Sans Thai', sans-serif;
+  font-family: "Noto Sans Thai", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
 }
 .Toastify__toast {
-  font-family: 'Noto Sans Thai', sans-serif !important;
+  font-family: "Noto Sans Thai", sans-serif !important;
   font-size: 1rem;
+}
+html,
+body {
+  overflow-x: hidden;
 }

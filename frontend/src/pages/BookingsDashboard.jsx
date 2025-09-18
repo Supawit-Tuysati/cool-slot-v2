@@ -85,7 +85,9 @@ function BookingsDashboard() {
             slot.bookings.forEach((booking) => {
               bookings.push({
                 ...booking,
+
                 fridge_id: fridge.id,
+                slot_id: slot.id,
                 id: booking.id,
                 title: fridge.name,
                 user: booking.user?.name || "-",
@@ -158,18 +160,18 @@ function BookingsDashboard() {
   }, [bookings, statusFilter, term]);
 
   // --- cancel ---
-  const cancelBooking = async (id) => {
+  const cancelBooking = async (id, slot_id) => {
+    console.log(id, 'xxxxxx',slot_id);
+    
     try {
       setCancellingId(id);
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Simulate success
-      console.log(`Booking ${id} cancelled successfully (simulated)!`);
-      // toast.success("ยกเลิกการจองเรียบร้อย (จำลอง)"); // Removed toast
-      setBookings((prev) =>
-        prev.map((b) => (b.id === id ? { ...b, status: "cancelled", originalStatus: "cancelled" } : b))
-      );
+      const submitData = {
+        booking_id: id,
+        slot_id: slot_id,
+      };
+      await axios.put(`${BASE_URL}/api/booking/cancelBookingFridge`, submitData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
     } catch (err) {
       console.error("Error simulating cancellation:", err);
       // toast.error("ยกเลิกการจองไม่สำเร็จ (จำลอง)"); // Removed toast
@@ -451,7 +453,9 @@ function BookingsDashboard() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => navigate(`/edit-booking/${booking.fridge_id}`, { state: { booking_id: booking.id } })}
+                            onClick={() =>
+                              navigate(`/edit-booking/${booking.fridge_id}`, { state: { booking_id: booking.id } })
+                            }
                             className="text-blue-600 hover:text-blue-900"
                           >
                             <Edit size={16} />
@@ -460,7 +464,7 @@ function BookingsDashboard() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => cancelBooking(booking.id)}
+                              onClick={() => cancelBooking(booking.id , booking.slot_id )}
                               disabled={cancellingId === booking.id}
                               className="text-red-600 hover:text-red-900"
                             >

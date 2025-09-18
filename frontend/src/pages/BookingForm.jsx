@@ -262,16 +262,7 @@ function BookingForm() {
                   {errors.end_time && <p className="text-sm text-red-500">{errors.end_time}</p>}
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="note">หมายเหตุ</Label>
-                <Textarea
-                  id="note"
-                  value={bookingData.note}
-                  onChange={(e) => handleBookingInput("note", e.target.value)}
-                  placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)"
-                  rows={3}
-                />
-              </div>
+           
             </CardContent>
           </Card>
         )}

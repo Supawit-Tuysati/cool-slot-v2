@@ -8,19 +8,18 @@ import { Textarea } from "../components/ui/textarea";
 import { Badge } from "../components/ui/badge";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { useNavigate, useParams, useLocation  } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-
 
 // ฟอร์มจองช่องเก็บของในตู้เย็น
 function BookingFormEdit() {
   const navigate = useNavigate();
-   const { token } = useAuth();
-   const { fridge_id } = useParams();
-   const location = useLocation();
-   const booking_id = location.state?.booking_id;
-   console.log(fridge_id,booking_id);
-   
+  const { token } = useAuth();
+  const { fridge_id } = useParams();
+  const location = useLocation();
+  const booking_id = location.state?.booking_id;
+  console.log(fridge_id, booking_id);
+
   // กำหนด URL สำหรับเรียก API
   const API_HOST = import.meta.env.VITE_API_HOST;
   const API_PORT = import.meta.env.VITE_API_PORT;
@@ -42,15 +41,68 @@ function BookingFormEdit() {
   // โหลดข้อมูลตู้เย็นจาก API
   const loadFridges = async () => {
     try {
-      const res = await axios.get(`${BASE_URL}/api/booking/getFridge/${fridge_id}`, {
+      const res = await axios.get(`${BASE_URL}/api/booking/getDataBooking/${fridge_id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setFridges(res.data);
+
+      // ✅ หา booking ที่เรากำลังแก้ไข
+      const fridge = res.data[0];
+      let foundBooking = null;
+      let foundFridge = null;
+      let foundSlot = null;
+
+      fridge.shelves.forEach((shelf) => {
+        shelf.slots.forEach((slot) => {
+          slot.bookings.forEach((booking) => {
+            if (booking.id === booking_id) {
+              foundBooking = booking;
+              foundFridge = fridge;
+              foundSlot = { ...slot, shelf_number: shelf.shelf_number };
+            }
+          });
+        });
+      });
+
+      if (foundBooking) {
+        // ✅ set state เพื่อโชว์ฟอร์มอัตโนมัติ
+        setSelectedFridge(foundFridge);
+        setSelectedSlot(foundSlot);
+        setBookingData({
+          start_time: formatDateForInput(foundBooking.start_time),
+          end_time: formatDateForInput(foundBooking.end_time),
+          note: foundBooking.note || "",
+        });
+        setItems(
+          foundBooking.items.length > 0
+            ? foundBooking.items.map((it) => ({
+                id: it.id,
+                name: it.name,
+                quantity: it.quantity,
+                note: it.note || "",
+              }))
+            : [{ id: 1, name: "", quantity: 1, note: "" }]
+        );
+      }
     } catch (error) {
       toast.error("ไม่สามารถโหลดข้อมูลตู้เย็นได้");
     }
   };
 
+  function formatDateForInput(dateStr) {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    const pad = (n) => n.toString().padStart(2, "0");
+
+    const yyyy = date.getFullYear();
+    const MM = pad(date.getMonth() + 1);
+    const dd = pad(date.getDate());
+    const hh = pad(date.getHours());
+    const mm = pad(date.getMinutes());
+
+    // datetime-local ไม่ต้องมี timezone / seconds
+    return `${yyyy}-${MM}-${dd}T${hh}:${mm}`;
+  }
   // โหลดข้อมูลตู้เย็นเมื่อเปิดหน้า
   useEffect(() => {
     loadFridges();
@@ -64,17 +116,12 @@ function BookingFormEdit() {
 
   // อัพเดทข้อมูลสิ่งของแต่ละรายการ
   function handleItemInput(itemId, field, value) {
-    setItems((prev) =>
-      prev.map((item) => (item.id === itemId ? { ...item, [field]: value } : item))
-    );
+    setItems((prev) => prev.map((item) => (item.id === itemId ? { ...item, [field]: value } : item)));
   }
 
   // เพิ่มรายการสิ่งของ
   function addItem() {
-    setItems((prev) => [
-      ...prev,
-      { id: Date.now(), name: "", quantity: 1, note: "" },
-    ]);
+    setItems((prev) => [...prev, { id: Date.now(), name: "", quantity: 1, note: "" }]);
   }
 
   // ลบรายการสิ่งของ
@@ -86,6 +133,9 @@ function BookingFormEdit() {
 
   // เลือกช่องในตู้เย็น
   function chooseSlot(fridge, shelf, slot) {
+    // ✅ ถ้ามี booking_id แสดงว่าเป็นหน้าแก้ไข → ห้ามกดเปลี่ยนช่อง
+    if (booking_id) return;
+
     if (slot.is_disabled === false) {
       setSelectedFridge(fridge);
       setSelectedSlot({ ...slot, shelf_number: shelf.shelf_number });
@@ -135,14 +185,16 @@ function BookingFormEdit() {
 
     try {
       const submitData = {
+        booking_id, 
         slot_id: selectedSlot.id,
         start_time: bookingData.start_time,
         end_time: bookingData.end_time,
         note: bookingData.note,
         items: items.filter((item) => item.name.trim()),
       };
+      
 
-      await axios.post(`${BASE_URL}/api/booking/createBookingFridge`, submitData, {
+      await axios.put(`${BASE_URL}/api/booking/updateBookingFridge`, submitData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       loadFridges();
@@ -163,13 +215,13 @@ function BookingFormEdit() {
           <ArrowLeft className="w-4 h-4" /> กลับ
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">จองช่องเก็บของ</h1>
-          <p className="text-gray-600">เลือกช่องที่ต้องการจอง</p>
+          <h1 className="text-2xl font-bold">แก้ไขการจองช่องเก็บของ</h1>
+          <p className="text-gray-600">เพิ่ม/แก้ไข รายการสิ่งของ</p>
         </div>
       </div>
 
       {/* ฟอร์มจอง */}
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-5">
         {/* เลือกตู้เย็นและช่อง */}
         <Card>
           <CardHeader>
@@ -205,8 +257,11 @@ function BookingFormEdit() {
                             key={slot.id}
                             type="button"
                             onClick={() => chooseSlot(fridge, shelf, slot)}
+                            disabled={booking_id ? slot.id !== selectedSlot?.id : false}
                             className={
-                              slot.is_disabled === false
+                              booking_id && slot.id !== selectedSlot?.id
+                                ? "border-gray-200 bg-gray-100 text-gray-400 p-3 rounded-lg border-2 cursor-not-allowed"
+                                : slot.is_disabled === false
                                 ? selectedSlot?.id === slot.id
                                   ? "border-blue-500 bg-blue-50 text-blue-700 p-3 rounded-lg border-2"
                                   : "border-gray-300 hover:border-blue-400 hover:bg-blue-50 p-3 rounded-lg border-2"
@@ -266,16 +321,6 @@ function BookingFormEdit() {
                   {errors.end_time && <p className="text-sm text-red-500">{errors.end_time}</p>}
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="note">หมายเหตุ</Label>
-                <Textarea
-                  id="note"
-                  value={bookingData.note}
-                  onChange={(e) => handleBookingInput("note", e.target.value)}
-                  placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)"
-                  rows={3}
-                />
-              </div>
             </CardContent>
           </Card>
         )}
@@ -329,9 +374,7 @@ function BookingFormEdit() {
                         type="number"
                         min="1"
                         value={item.quantity}
-                        onChange={(e) =>
-                          handleItemInput(item.id, "quantity", parseInt(e.target.value) || 1)
-                        }
+                        onChange={(e) => handleItemInput(item.id, "quantity", parseInt(e.target.value) || 1)}
                         className={errors[`item_${item.id}_quantity`] ? "border-red-500" : ""}
                       />
                       {errors[`item_${item.id}_quantity`] && (
@@ -356,9 +399,6 @@ function BookingFormEdit() {
 
         {/* ปุ่มส่งคำขอ */}
         <div className="flex justify-end gap-4 pt-6 border-t">
-          <Button type="button" variant="outline">
-            ยกเลิก
-          </Button>
           <Button type="submit" disabled={isLoading || !selectedSlot} className="min-w-[120px]">
             {isLoading ? (
               <div className="flex items-center gap-2">
@@ -367,9 +407,12 @@ function BookingFormEdit() {
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <Save size={16} /> ยืนยันการจอง
+                <Save size={16} /> แก้ไขการจอง
               </div>
             )}
+          </Button>
+          <Button type="button" variant="outline">
+            ยกเลิก
           </Button>
         </div>
       </form>

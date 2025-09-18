@@ -1,4 +1,4 @@
-import { findAllFridgesSlots, findBookings,findBooking, createBooking } from "../models/bookingModel.js";
+import { findAllFridgesSlots, findBookings,findBooking, createBooking, updateBooking, cancelBooking } from "../models/bookingModel.js";
 
 // GET /api/fridges - ดึงข้อมูลตู้เย็นทั้งหมดพร้อมชั้นและช่อง
 export const getFridgesSlots = async (req, res) => {
@@ -28,6 +28,9 @@ export const getDataBookings = async (req, res) => {
         const id = parseInt(req.params.id, 10);
     const bookings = await findBooking(id);
 
+    console.log(bookings);
+    
+
     res.status(200).json(bookings);
   } catch (error) {
     console.error("Error in getBookings:", error);
@@ -55,3 +58,44 @@ export const createBookingFridge = async (req, res) => {
     res.status(500).json({ message: "เกิดข้อผิดพลาดในการจองตู้เย็น" });
   }
 };
+
+export const updateBookingFridge = async (req, res) => {
+  try {
+    const { booking_id, slot_id, start_time, end_time, note, items } = req.body;
+    const userId = req.user.id;
+
+    const booking = await updateBooking({
+      booking_id,
+      user_id: userId,
+      slot_id,
+      start_time,
+      end_time,
+      note,
+      items,
+    });
+
+    res.status(200).json(booking);
+  } catch (error) {
+    console.error("Error in updateBookingFridge:", error);
+    res.status(500).json({ message: "เกิดข้อผิดพลาดในการแก้ไขการจองตู้เย็น" });
+  }
+};
+
+
+export const cancelBookingFridge = async (req, res) => {
+  try {
+    const { booking_id, slot_id } = req.body;
+    const userId = req.user.id;
+    const booking = await cancelBooking({
+      booking_id,
+      slot_id,
+      user_id: userId,
+    });
+
+    res.status(200).json(booking);
+  } catch (error) {
+    console.error("Error in updateBookingFridge:", error);
+    res.status(500).json({ message: "เกิดข้อผิดพลาดในการแก้ไขการจองตู้เย็น" });
+  }
+};
+
