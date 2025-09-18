@@ -190,7 +190,7 @@ export const cancelBooking = async (data) => {
     // อัพเดตสถานะช่อง (ยังปิดไว้)
     await tx.fridgeSlot.update({
       where: { id: slot_id },
-      data: { is_disabled: true },
+      data: { is_disabled: false },
     });
 
     return booking;
