@@ -28,7 +28,8 @@ export const findAllFridgesSlots = async (id) => {
   });
 };
 
-export const findBookings = async () => {
+export const findBookings = async (userId, role) => {
+  const whereCondition = role === "admin" ? {} : { created_by: userId };
   return prisma.fridge.findMany({
     include: {
       shelves: {
@@ -36,6 +37,8 @@ export const findBookings = async () => {
           slots: {
             include: {
               bookings: {
+                where: whereCondition, // << ตรงนี้
+                orderBy: { id: "desc" },
                 include: {
                   items: true,
                   user: {
@@ -175,19 +178,34 @@ export const updateBooking = async (data) => {
   });
 };
 
-export const cancelBooking = async (data) => {
-  const { booking_id, slot_id, user_id } = data;
+export const clearOrCancelBooking = async (data) => {
+  
+  const { booking_id, slot_id, user_id, action } = data;
+console.log(data);
 
   return prisma.$transaction(async (tx) => {
-    const booking = await tx.booking.update({
-      where: { id: booking_id },
-      data: {
+    let updateData = {};
+
+    if (action === "cancel") {
+      updateData = {
         cancelled_at: new Date(),
         cancelled_by: user_id,
-      },
+      };
+    } else if (action === "clear") {
+      updateData = {
+        cleared_at: new Date(),
+        cleared_by: user_id,
+      };
+    } else {
+      throw new Error("Invalid action type");
+    }
+
+    const booking = await tx.booking.update({
+      where: { id: booking_id },
+      data: updateData,
     });
 
-    // อัพเดตสถานะช่อง (ยังปิดไว้)
+    // ✅ ถ้าเคลียร์ของแล้ว หรือยกเลิก -> เปิดช่องให้จองใหม่ได้
     await tx.fridgeSlot.update({
       where: { id: slot_id },
       data: { is_disabled: false },

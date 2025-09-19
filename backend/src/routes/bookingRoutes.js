@@ -1,6 +1,6 @@
 import express from "express";
 import { authenticateToken } from "../middlewares/authMiddleware.js";
-import { getFridgesSlots, getBookings, getDataBookings,createBookingFridge,updateBookingFridge,cancelBookingFridge } from "../controllers/bookingController.js";
+import { getFridgesSlots, getBookings, getDataBookings,createBookingFridge,updateBookingFridge,clearOrCancelBookingFridge } from "../controllers/bookingController.js";
 
 const router = express.Router();
 
@@ -11,6 +11,6 @@ router.get("/listBookings", authenticateToken, getBookings);
 router.get("/getDataBooking/:id", authenticateToken, getDataBookings);
 router.post("/createBookingFridge", authenticateToken, createBookingFridge);
 router.put("/updateBookingFridge", authenticateToken, updateBookingFridge);
-router.put("/cancelBookingFridge", authenticateToken, cancelBookingFridge);
+router.put("/clearOrCancelBookingFridge", authenticateToken, clearOrCancelBookingFridge);
 
 export default router;

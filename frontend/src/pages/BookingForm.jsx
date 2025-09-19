@@ -143,6 +143,7 @@ function BookingForm() {
       });
       loadFridges();
       toast.success("จองสำเร็จ!");
+      navigate(`/bookings`);
     } catch (error) {
       toast.error("เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
     } finally {

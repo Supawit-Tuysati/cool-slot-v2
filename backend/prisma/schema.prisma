@@ -115,6 +115,8 @@ model Booking {
   slot_id    Int
   start_time DateTime
   end_time   DateTime
+  cleared_at  DateTime?
+  cleared_by  Int?
 
   cancelled_at  DateTime?
   cancelled_by  Int?

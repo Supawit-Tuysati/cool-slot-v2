@@ -35,10 +35,14 @@ function BookingsDashboard() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [cancellingId, setCancellingId] = useState(null);
+  const [clearCancelId, setClearCancelId] = useState(null);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // --- helpers ---
   const getStatus = (endTime, bookingStatus) => {
+    if (bookingStatus === "cleared") return "cleared";
     if (bookingStatus === "cancelled") return "cancelled";
     if (!endTime) return bookingStatus || "booked";
 
@@ -58,6 +62,8 @@ function BookingsDashboard() {
         return "ใกล้หมดอายุ";
       case "expired":
         return "หมดอายุ";
+      case "cleared":
+        return "เคลียร์";
       case "cancelled":
         return "ยกเลิก";
       default:
@@ -94,7 +100,7 @@ function BookingsDashboard() {
                 start_time: booking.start_time,
                 end_time: booking.end_time,
                 items: booking.items,
-                originalStatus: booking.cancelled_at ? "cancelled" : "booked",
+                originalStatus: booking.cancelled_at ? "cancelled" : booking.cleared_at ? "cleared" : "booked",
               });
             });
           });
@@ -117,12 +123,7 @@ function BookingsDashboard() {
         status: getStatus(booking.end_time, booking.originalStatus),
       }));
 
-      processedBookings.sort((a, b) => {
-        if (!a.end_time && !b.end_time) return 0;
-        if (!a.end_time) return 1;
-        if (!b.end_time) return -1;
-        return new Date(a.end_time) - new Date(b.end_time);
-      });
+      processedBookings.sort((a, b) => b.id - a.id);
 
       setBookings(processedBookings);
     } catch (error) {
@@ -142,8 +143,9 @@ function BookingsDashboard() {
     const booked = bookings.filter((b) => ["booked", "near-expired"].includes(b.status)).length;
     const nearExpired = bookings.filter((b) => b.status === "near-expired").length;
     const expired = bookings.filter((b) => b.status === "expired").length;
+    const cleared = bookings.filter((b) => b.status === "cleared").length;
     const cancelled = bookings.filter((b) => b.status === "cancelled").length;
-    return { total, booked, nearExpired, expired, cancelled };
+    return { total, booked, nearExpired, expired, cleared, cancelled };
   }, [bookings]);
 
   const term = (searchTerm || "").toLowerCase();
@@ -155,28 +157,36 @@ function BookingsDashboard() {
         (booking.fridgeName || "").toLowerCase().includes(term) ||
         (booking.shelfName || "").toLowerCase().includes(term) ||
         (booking.title || "").toLowerCase().includes(term);
+      setCurrentPage(1);
       return matchesStatus && matchesSearch;
     });
   }, [bookings, statusFilter, term]);
 
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedData = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filtered.slice(start, start + itemsPerPage);
+  }, [filtered, currentPage]);
+
   // --- cancel ---
-  const cancelBooking = async (id, slot_id) => {
-    console.log(id, 'xxxxxx',slot_id);
-    
+  const clearOrCancelBooking = async (id, slot_id, action) => {
+    // console.log(id, "xxxxxx", slot_id);
+
     try {
-      setCancellingId(id);
+      setClearCancelId(id);
       const submitData = {
         booking_id: id,
         slot_id: slot_id,
+        action: action,
       };
-      await axios.put(`${BASE_URL}/api/booking/cancelBookingFridge`, submitData, {
+      await axios.put(`${BASE_URL}/api/booking/clearOrCancelBookingFridge`, submitData, {
         headers: { Authorization: `Bearer ${token}` },
       });
     } catch (err) {
       console.error("Error simulating cancellation:", err);
       // toast.error("ยกเลิกการจองไม่สำเร็จ (จำลอง)"); // Removed toast
     } finally {
-      setCancellingId(null);
+      setClearCancelId(null);
     }
   };
 
@@ -294,6 +304,7 @@ function BookingsDashboard() {
               <SelectItem value="booked">จองอยู่</SelectItem>
               <SelectItem value="near-expired">ใกล้หมดอายุ</SelectItem>
               <SelectItem value="expired">หมดอายุ</SelectItem>
+              <SelectItem value="cleared">เคลียร์</SelectItem>
               <SelectItem value="cancelled">ยกเลิก</SelectItem>
             </SelectContent>
           </Select>
@@ -320,20 +331,20 @@ function BookingsDashboard() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filtered.length === 0 && !isLoading ? (
+                {paginatedData.length === 0 && !isLoading ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                    <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
                       ยังไม่มีรายการ
                     </td>
                   </tr>
                 ) : isLoading ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                    <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
                       กำลังโหลดข้อมูล...
                     </td>
                   </tr>
                 ) : (
-                  filtered.map((booking) => (
+                  paginatedData.map((booking) => (
                     <tr key={booking.id} className="hover:bg-gray-50">
                       {/* ตำแหน่ง */}
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -449,31 +460,51 @@ function BookingsDashboard() {
 
                       {/* การจัดการ */}
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              navigate(`/edit-booking/${booking.fridge_id}`, { state: { booking_id: booking.id } })
-                            }
-                            className="text-blue-600 hover:text-blue-900"
-                          >
-                            <Edit size={16} />
-                          </Button>
-                          {booking.status !== "cancelled" && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => cancelBooking(booking.id , booking.slot_id )}
-                              disabled={cancellingId === booking.id}
-                              className="text-red-600 hover:text-red-900"
-                            >
-                              {cancellingId === booking.id ? (
-                                <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-                              ) : (
-                                <XCircle size={16} />
-                              )}
-                            </Button>
+                        <div className="flex items-center gap-1">
+                          {/* แสดงปุ่มก็ต่อเมื่อ booking.status ไม่ใช่ cancelled หรือ expired */}
+                          {booking.status !== "expired" && booking.status !== "cleared" && booking.status !== "cancelled" && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  navigate(`/edit-booking/${booking.fridge_id}`, {
+                                    state: { booking_id: booking.id },
+                                  })
+                                }
+                                className="text-blue-600 hover:text-blue-900"
+                              >
+                                <Edit size={16} />
+                              </Button>
+
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => clearOrCancelBooking(booking.id, booking.slot_id, "clear")}
+                                disabled={clearCancelId === booking.id}
+                                className="text-green-600 hover:text-green-900"
+                              >
+                                {clearCancelId === booking.id ? (
+                                  <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                                ) : (
+                                  <CheckCircle size={16} />
+                                )}
+                              </Button>
+
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => clearOrCancelBooking(booking.id, booking.slot_id, "cancel")}
+                                disabled={clearCancelId === booking.id}
+                                className="text-red-600 hover:text-red-900"
+                              >
+                                {clearCancelId === booking.id ? (
+                                  <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                                ) : (
+                                  <XCircle size={16} />
+                                )}
+                              </Button>
+                            </>
                           )}
                         </div>
                       </td>
@@ -482,6 +513,23 @@ function BookingsDashboard() {
                 )}
               </tbody>
             </table>
+            <div className="flex justify-center items-center gap-2 mt-4">
+              <Button variant="outline" disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)}>
+                ก่อนหน้า
+              </Button>
+
+              <span>
+                หน้า {currentPage} / {totalPages || 1}
+              </span>
+
+              <Button
+                variant="outline"
+                disabled={currentPage === totalPages || totalPages === 0}
+                onClick={() => setCurrentPage((p) => p + 1)}
+              >
+                ถัดไป
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -4,6 +4,10 @@ npm run prisma:migrate --name init #สร้าง migration และ apply �
 npm run prisma:seed #seed database
 npm run prisma:reset #reste และ seed database
 
+----- If Reset All Database ----
+npx prisma db push --force-reset
+npx prisma db seed
+
 
 ----- API REGISTER -----
 curl --location 'http://localhost:5000/api/auth/register' \
