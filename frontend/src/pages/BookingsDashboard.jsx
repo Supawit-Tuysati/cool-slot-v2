@@ -1,10 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-// import axios from "axios"; // Removed axios
 import {
-  AlertCircle,
   Edit,
   Clock,
-  Eye,
   Package,
   User,
   XCircle,
@@ -12,22 +9,27 @@ import {
   Refrigerator,
   CheckCircle,
   Plus,
+  MoreHorizontal,
 } from "lucide-react";
-// import { toast } from "react-toastify"; // Removed toast
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Badge } from "../components/ui/badge";
 import { Input } from "../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import axios from "axios";
 import { useAuth } from "../contexts/AuthContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
 
 function BookingsDashboard() {
   const navigate = useNavigate();
   const { token } = useAuth();
-  const API_HOST = import.meta.env.VITE_API_HOST; // Removed backend related variables
+  const API_HOST = import.meta.env.VITE_API_HOST;
   const API_PORT = import.meta.env.VITE_API_PORT;
   const BASE_URL = `${API_HOST}:${API_PORT}`;
 
@@ -75,6 +77,10 @@ function BookingsDashboard() {
     try {
       setIsLoading(true);
       await new Promise((resolve) => setTimeout(resolve, 500));
+
+      await axios.get(`${BASE_URL}/api/fridge`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       // เปลี่ยน endpoint ให้ตรงกับข้อมูลที่แนบมา
       const { data } = await axios.get(`${BASE_URL}/api/booking/listBookings`, {
@@ -140,7 +146,7 @@ function BookingsDashboard() {
   // --- stats/filter/search ---
   const stats = useMemo(() => {
     const total = bookings.length;
-    const booked = bookings.filter((b) => ["booked", "near-expired"].includes(b.status)).length;
+    const booked = bookings.filter((b) => ["booked", "near-expired", 'expired'].includes(b.status)).length;
     const nearExpired = bookings.filter((b) => b.status === "near-expired").length;
     const expired = bookings.filter((b) => b.status === "expired").length;
     const cleared = bookings.filter((b) => b.status === "cleared").length;
@@ -186,6 +192,7 @@ function BookingsDashboard() {
       console.error("Error simulating cancellation:", err);
       // toast.error("ยกเลิกการจองไม่สำเร็จ (จำลอง)"); // Removed toast
     } finally {
+      fetchBookings();
       setClearCancelId(null);
     }
   };
@@ -194,8 +201,8 @@ function BookingsDashboard() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">การจองตู้เย็น</h1>
-          <p className="text-gray-600">จัดการและติดตามการจองช่องเก็บของในตู้เย็น</p>
+          <h1 className="text-2xl font-bold text-gray-900">จองตู้เย็น</h1>
+          <p className="text-gray-600">จองช่องเก็บของในตู้เย็น</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={() => navigate("/booking-fridge")} className="flex items-center gap-2">
@@ -326,8 +333,8 @@ function BookingsDashboard() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">วัน—เวลาหมดอายุ</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">สิ่งของ</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">รายละเอียด</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">สถานะ</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">การจัดการ</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase ">สถานะ</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">การจัดการ</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -460,53 +467,69 @@ function BookingsDashboard() {
 
                       {/* การจัดการ */}
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center gap-1">
-                          {/* แสดงปุ่มก็ต่อเมื่อ booking.status ไม่ใช่ cancelled หรือ expired */}
-                          {booking.status !== "expired" && booking.status !== "cleared" && booking.status !== "cancelled" && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() =>
-                                  navigate(`/edit-booking/${booking.fridge_id}`, {
-                                    state: { booking_id: booking.id },
-                                  })
-                                }
-                                className="text-blue-600 hover:text-blue-900"
-                              >
-                                <Edit size={16} />
-                              </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            {/* แก้ไข */}
+                            <DropdownMenuItem
+                              onClick={() =>
+                                navigate(`/edit-booking/${booking.fridge_id}`, {
+                                  state: { booking_id: booking.id },
+                                })
+                              }
+                              disabled={
+                                booking.status === "expired" ||
+                                booking.status === "cleared" ||
+                                booking.status === "cancelled"
+                              }
+                              className="text-blue-600"
+                            >
+                              <Edit className="mr-2 h-4 w-4 text-blue-600" />
+                              แก้ไข
+                            </DropdownMenuItem>
 
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => clearOrCancelBooking(booking.id, booking.slot_id, "clear")}
-                                disabled={clearCancelId === booking.id}
-                                className="text-green-600 hover:text-green-900"
-                              >
-                                {clearCancelId === booking.id ? (
-                                  <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-                                ) : (
-                                  <CheckCircle size={16} />
-                                )}
-                              </Button>
+                            {/* เคลียร์ */}
+                            <DropdownMenuItem
+                              onClick={() => clearOrCancelBooking(booking.id, booking.slot_id, "clear")}
+                              disabled={
+                                clearCancelId === booking.id ||
+                                booking.status === "cleared" ||
+                                booking.status === "cancelled"
+                              }
+                              className="text-green-600"
+                            >
+                              {clearCancelId === booking.id ? (
+                                <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+                              ) : (
+                                <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                              )}
+                              เคลียร์
+                            </DropdownMenuItem>
 
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => clearOrCancelBooking(booking.id, booking.slot_id, "cancel")}
-                                disabled={clearCancelId === booking.id}
-                                className="text-red-600 hover:text-red-900"
-                              >
-                                {clearCancelId === booking.id ? (
-                                  <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-                                ) : (
-                                  <XCircle size={16} />
-                                )}
-                              </Button>
-                            </>
-                          )}
-                        </div>
+                            {/* ยกเลิก */}
+                            <DropdownMenuItem
+                              onClick={() => clearOrCancelBooking(booking.id, booking.slot_id, "cancel")}
+                              disabled={
+                                clearCancelId === booking.id ||
+                                booking.status === "expired" ||
+                                booking.status === "cleared" ||
+                                booking.status === "cancelled"
+                              }
+                              className="text-red-600"
+                            >
+                              {clearCancelId === booking.id ? (
+                                <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+                              ) : (
+                                <XCircle className="mr-2 h-4 w-4 text-red-600" />
+                              )}
+                              ยกเลิก
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   ))

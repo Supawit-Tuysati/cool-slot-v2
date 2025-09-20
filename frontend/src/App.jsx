@@ -19,7 +19,7 @@ import UserForm from "./pages/UserForm";
 import UserFromEdit from "./pages/UserFromEdit";
 import NotificationManagement from "./pages/NotificationManagement";
 import Departments from "./pages/Departments";
-import BookingFormEdit from './pages/BookingFormEdit';
+import BookingFormEdit from "./pages/BookingFormEdit";
 import "./App.css";
 
 function App() {
@@ -43,7 +43,7 @@ function App() {
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={["admin", "user","cleaner"]}>
                 <MainLayout>
                   <Dashboard />
                 </MainLayout>
@@ -53,7 +53,7 @@ function App() {
           <Route
             path="/bookings"
             element={
-              <ProtectedRoute>
+               <ProtectedRoute allowedRoles={["admin", "user","cleaner"]}>
                 <MainLayout>
                   <BookingsDashboard />
                 </MainLayout>
@@ -63,7 +63,7 @@ function App() {
           <Route
             path="/add-booking/:fridge_id"
             element={
-              <ProtectedRoute>
+                 <ProtectedRoute allowedRoles={["admin", "user","cleaner"]}>
                 <MainLayout>
                   <BookingForm />
                 </MainLayout>
@@ -74,17 +74,17 @@ function App() {
           <Route
             path="/edit-booking/:fridge_id"
             element={
-              <ProtectedRoute>
+                 <ProtectedRoute allowedRoles={["admin", "user","cleaner"]}>
                 <MainLayout>
                   <BookingFormEdit />
                 </MainLayout>
               </ProtectedRoute>
             }
           />
-             <Route
+          <Route
             path="/booking-fridge"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={["admin", "user","cleaner"]}>
                 <MainLayout>
                   <FridgeAll />
                 </MainLayout>
@@ -94,7 +94,7 @@ function App() {
           <Route
             path="/fridge-management"
             element={
-              <ProtectedRoute>
+               <ProtectedRoute allowedRoles={["admin"]}>
                 <MainLayout>
                   <FridgeManagement />
                 </MainLayout>
@@ -104,7 +104,7 @@ function App() {
           <Route
             path="/add-fridge"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={["admin"]}>
                 <MainLayout>
                   <FridgeForm />
                 </MainLayout>
@@ -114,7 +114,7 @@ function App() {
           <Route
             path="/edit-fridge/:id"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={["admin"]}>
                 <MainLayout>
                   <FridgeFormEdit />
                 </MainLayout>
@@ -122,9 +122,19 @@ function App() {
             }
           />
           <Route
+            path="/booking-management"
+            element={
+                 <ProtectedRoute allowedRoles={["admin","cleaner"]}>
+                <MainLayout>
+                  <BookingManagement />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/departments"
             element={
-              <ProtectedRoute>
+                 <ProtectedRoute allowedRoles={["admin"]}>
                 <MainLayout>
                   <Departments />
                 </MainLayout>
@@ -134,7 +144,7 @@ function App() {
           <Route
             path="/user-management"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={["admin"]}>
                 <MainLayout>
                   <UserManagement />
                 </MainLayout>
@@ -144,7 +154,7 @@ function App() {
           <Route
             path="/add-user"
             element={
-              <ProtectedRoute>
+               <ProtectedRoute allowedRoles={["admin"]}>
                 <MainLayout>
                   <UserForm />
                 </MainLayout>
@@ -154,7 +164,7 @@ function App() {
           <Route
             path="/edit-user/:id"
             element={
-              <ProtectedRoute>
+                 <ProtectedRoute allowedRoles={["admin"]}>
                 <MainLayout>
                   <UserFromEdit />
                 </MainLayout>
@@ -162,30 +172,15 @@ function App() {
             }
           />
           <Route
-            path="/booking-management"
-            element={
-              <ProtectedRoute>
-                <MainLayout>
-                  <BookingManagement />
-                </MainLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/notification-management"
             element={
-              <ProtectedRoute>
+                 <ProtectedRoute allowedRoles={["admin", "cleaner"]}>
                 <MainLayout>
                   <NotificationManagement />
                 </MainLayout>
               </ProtectedRoute>
             }
           />
-          {/* <Route path="/simple" element={
-            <ProtectedRoute>
-              <MainLayout><SimplePages /></MainLayout>
-            </ProtectedRoute>
-          } /> */}
           {/* Catch All */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>

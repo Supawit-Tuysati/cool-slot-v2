@@ -1,10 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 // import axios from "axios"; // Removed axios
 import {
-  AlertCircle,
   Edit,
   Clock,
-  Eye,
   Package,
   User,
   XCircle,
@@ -12,17 +10,23 @@ import {
   Refrigerator,
   CheckCircle,
   Plus,
+  MoreHorizontal,
 } from "lucide-react";
 // import { toast } from "react-toastify"; // Removed toast
 import { useNavigate } from "react-router-dom";
 
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Badge } from "../components/ui/badge";
 import { Input } from "../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import axios from "axios";
 import { useAuth } from "../contexts/AuthContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
 
 function BookingManagement() {
   const navigate = useNavigate();
@@ -35,13 +39,14 @@ function BookingManagement() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [cancellingId, setCancellingId] = useState(null);
+  const [clearCancelId, setClearCancelId] = useState(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
   // --- helpers ---
   const getStatus = (endTime, bookingStatus) => {
+    if (bookingStatus === "cleared") return "cleared";
     if (bookingStatus === "cancelled") return "cancelled";
     if (!endTime) return bookingStatus || "booked";
 
@@ -50,7 +55,7 @@ function BookingManagement() {
 
     if (end < now) return "expired";
     if (end - now <= 3 * 60 * 60 * 1000) return "near-expired";
-    return bookingStatus || "booked";
+    return bookingStatus;
   };
 
   const getBadge = (status) => {
@@ -61,6 +66,8 @@ function BookingManagement() {
         return "ใกล้หมดอายุ";
       case "expired":
         return "หมดอายุ";
+      case "cleared":
+        return "เคลียร์";
       case "cancelled":
         return "ยกเลิก";
       default:
@@ -72,6 +79,10 @@ function BookingManagement() {
     try {
       setIsLoading(true);
       await new Promise((resolve) => setTimeout(resolve, 500));
+
+      await axios.get(`${BASE_URL}/api/fridge`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       // เปลี่ยน endpoint ให้ตรงกับข้อมูลที่แนบมา
       const { data } = await axios.get(`${BASE_URL}/api/booking/listBookings`, {
@@ -97,7 +108,7 @@ function BookingManagement() {
                 start_time: booking.start_time,
                 end_time: booking.end_time,
                 items: booking.items,
-                originalStatus: booking.cancelled_at ? "cancelled" : "booked",
+                originalStatus: booking.cancelled_at ? "cancelled" : booking.cleared_at ? "cleared" : "booked",
               });
             });
           });
@@ -137,11 +148,12 @@ function BookingManagement() {
   // --- stats/filter/search ---
   const stats = useMemo(() => {
     const total = bookings.length;
-    const booked = bookings.filter((b) => ["booked", "near-expired"].includes(b.status)).length;
+    const booked = bookings.filter((b) => ["booked", "near-expired", 'expired'].includes(b.status)).length;
     const nearExpired = bookings.filter((b) => b.status === "near-expired").length;
     const expired = bookings.filter((b) => b.status === "expired").length;
+    const cleared = bookings.filter((b) => b.status === "cleared").length;
     const cancelled = bookings.filter((b) => b.status === "cancelled").length;
-    return { total, booked, nearExpired, expired, cancelled };
+    return { total, booked, nearExpired, expired, cleared, cancelled };
   }, [bookings]);
 
   const term = (searchTerm || "").toLowerCase();
@@ -165,23 +177,25 @@ function BookingManagement() {
   }, [filtered, currentPage]);
 
   // --- cancel ---
-  const cancelBooking = async (id, slot_id) => {
+  const clearOrCancelBooking = async (id, slot_id, action) => {
     // console.log(id, "xxxxxx", slot_id);
 
     try {
-      setCancellingId(id);
+      setClearCancelId(id);
       const submitData = {
         booking_id: id,
         slot_id: slot_id,
+        action: action,
       };
-      await axios.put(`${BASE_URL}/api/booking/cancelBookingFridge`, submitData, {
+      await axios.put(`${BASE_URL}/api/booking/clearOrCancelBookingFridge`, submitData, {
         headers: { Authorization: `Bearer ${token}` },
       });
     } catch (err) {
       console.error("Error simulating cancellation:", err);
       // toast.error("ยกเลิกการจองไม่สำเร็จ (จำลอง)"); // Removed toast
     } finally {
-      setCancellingId(null);
+      fetchBookings();
+      setClearCancelId(null);
     }
   };
 
@@ -189,7 +203,7 @@ function BookingManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">การจองตู้เย็น</h1>
+          <h1 className="text-2xl font-bold text-gray-900">จัดการการจอง</h1>
           <p className="text-gray-600">จัดการและติดตามการจองช่องเก็บของในตู้เย็น</p>
         </div>
         <div className="flex gap-2">
@@ -299,6 +313,7 @@ function BookingManagement() {
               <SelectItem value="booked">จองอยู่</SelectItem>
               <SelectItem value="near-expired">ใกล้หมดอายุ</SelectItem>
               <SelectItem value="expired">หมดอายุ</SelectItem>
+              <SelectItem value="cleared">เคลียร์</SelectItem>
               <SelectItem value="cancelled">ยกเลิก</SelectItem>
             </SelectContent>
           </Select>
@@ -320,8 +335,8 @@ function BookingManagement() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">วัน—เวลาหมดอายุ</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">สิ่งของ</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">รายละเอียด</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">สถานะ</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">การจัดการ</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase ">สถานะ</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">การจัดการ</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -454,39 +469,69 @@ function BookingManagement() {
 
                       {/* การจัดการ */}
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center gap-2">
-                          {/* แสดงปุ่มก็ต่อเมื่อ booking.status ไม่ใช่ cancelled หรือ expired */}
-                          {booking.status !== "cancelled" && booking.status !== "expired" && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() =>
-                                  navigate(`/edit-booking/${booking.fridge_id}`, {
-                                    state: { booking_id: booking.id },
-                                  })
-                                }
-                                className="text-blue-600 hover:text-blue-900"
-                              >
-                                <Edit size={16} />
-                              </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            {/* แก้ไข */}
+                            <DropdownMenuItem
+                              onClick={() =>
+                                navigate(`/edit-booking/${booking.fridge_id}`, {
+                                  state: { booking_id: booking.id },
+                                })
+                              }
+                              disabled={
+                                booking.status === "expired" ||
+                                booking.status === "cleared" ||
+                                booking.status === "cancelled"
+                              }
+                              className="text-blue-600"
+                            >
+                              <Edit className="mr-2 h-4 w-4 text-blue-600" />
+                              แก้ไข
+                            </DropdownMenuItem>
 
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => cancelBooking(booking.id, booking.slot_id)}
-                                disabled={cancellingId === booking.id}
-                                className="text-red-600 hover:text-red-900"
-                              >
-                                {cancellingId === booking.id ? (
-                                  <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-                                ) : (
-                                  <XCircle size={16} />
-                                )}
-                              </Button>
-                            </>
-                          )}
-                        </div>
+                            {/* เคลียร์ */}
+                            <DropdownMenuItem
+                              onClick={() => clearOrCancelBooking(booking.id, booking.slot_id, "clear")}
+                              disabled={
+                                clearCancelId === booking.id ||
+                                booking.status === "cleared" ||
+                                booking.status === "cancelled"
+                              }
+                              className="text-green-600"
+                            >
+                              {clearCancelId === booking.id ? (
+                                <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+                              ) : (
+                                <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                              )}
+                              เคลียร์
+                            </DropdownMenuItem>
+
+                            {/* ยกเลิก */}
+                            <DropdownMenuItem
+                              onClick={() => clearOrCancelBooking(booking.id, booking.slot_id, "cancel")}
+                              disabled={
+                                clearCancelId === booking.id ||
+                                booking.status === "expired" ||
+                                booking.status === "cleared" ||
+                                booking.status === "cancelled"
+                              }
+                              className="text-red-600"
+                            >
+                              {clearCancelId === booking.id ? (
+                                <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+                              ) : (
+                                <XCircle className="mr-2 h-4 w-4 text-red-600" />
+                              )}
+                              ยกเลิก
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   ))

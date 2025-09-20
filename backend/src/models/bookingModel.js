@@ -99,11 +99,13 @@ export const createBooking = async (data) => {
         slot_id,
         start_time: new Date(start_time),
         end_time: new Date(end_time),
+        created_by: user_id,
         items: {
           create: items.map((item) => ({
             name: item.name,
             quantity: item.quantity,
             note: item.note,
+            created_by: user_id,
           })),
         },
       },
@@ -140,6 +142,8 @@ export const updateBooking = async (data) => {
       data: {
         start_time: new Date(start_time),
         end_time: new Date(end_time),
+        updated_at: new Date(),
+        updated_by: user_id,
         slot: { connect: { id: slot_id } },
         user: { connect: { id: user_id } },
         items: {
@@ -149,11 +153,15 @@ export const updateBooking = async (data) => {
               name: item.name,
               quantity: item.quantity,
               note: item.note,
+              updated_at: new Date(),
+              updated_by: user_id,
             },
             create: {
               name: item.name,
               quantity: item.quantity,
               note: item.note,
+              created_at: new Date(),
+              created_by: user_id,
             },
           })),
         },
@@ -179,9 +187,8 @@ export const updateBooking = async (data) => {
 };
 
 export const clearOrCancelBooking = async (data) => {
-  
   const { booking_id, slot_id, user_id, action } = data;
-console.log(data);
+  console.log(data);
 
   return prisma.$transaction(async (tx) => {
     let updateData = {};
@@ -190,11 +197,15 @@ console.log(data);
       updateData = {
         cancelled_at: new Date(),
         cancelled_by: user_id,
+        updated_at: new Date(),
+        updated_by: user_id,
       };
     } else if (action === "clear") {
       updateData = {
         cleared_at: new Date(),
         cleared_by: user_id,
+        updated_at: new Date(),
+        updated_by: user_id,
       };
     } else {
       throw new Error("Invalid action type");

@@ -222,7 +222,7 @@ const UserManagement = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-56">ผู้ใช้</TableHead>
-                  <TableHead className="w-24">บทบาท</TableHead>
+                  <TableHead className="w-24">ระดับใช้งาน</TableHead>
                   <TableHead className="w-32">แผนก</TableHead>
                   <TableHead className="w-24">สถานะ</TableHead>
                   <TableHead className="w-40">เข้าสู่ระบบล่าสุด</TableHead>

@@ -119,7 +119,8 @@ export const updateFridgeShelves = async ({ id, name, location, description, upd
     // 1. อัปเดตข้อมูลตู้เย็น
     await tx.fridge.update({
       where: { id },
-      data: { name, location, description, updated_by },
+      data: { name, 
+        location, description, updated_by, updated_at: new Date() },
     });
 
     if (Array.isArray(shelves)) {
@@ -143,6 +144,7 @@ export const updateFridgeShelves = async ({ id, name, location, description, upd
               shelf_number: shelf.shelf_number,
               shelf_name: shelf.shelf_name,
               updated_by,
+              updated_at: new Date(),
             },
           });
           // อัปเดตช่องในชั้นนี้
@@ -221,6 +223,7 @@ const updateSlotsForShelf = async (tx, shelfId, slots, updated_by) => {
         data: {
           slot_number: slot.slot_number,
           updated_by,
+          updated_at: new Date(),
         },
       });
     }
@@ -255,7 +258,6 @@ export const deleteFridge = async (id) => {
 
 export const checkBookingsSlot = async () => {
   const allFridges = await findAllFridges();
-  const now = new Date();
 
   // เก็บ id ของช่องที่จะเปิดกลับ
   const slotsToUpdate = [];
@@ -266,12 +268,12 @@ export const checkBookingsSlot = async () => {
         // ดึง bookings ของช่องนี้
         const slotBookings = await prisma.booking.findMany({
           where: { slot_id: slot.id },
-          select: { id: true, end_time: true, cancelled_at: true },
+          select: { id: true, cleared_at: true, cancelled_at: true },
         });
 
         // คัดเอาเฉพาะ bookings ที่ยัง active
         const activeBookings = slotBookings.filter(
-          (booking) => booking.cancelled_at === null && new Date(booking.end_time) > now
+          (booking) => booking.cleared_at === null && booking.cancelled_at === null
         );
 
         // ถ้าไม่มี booking ที่ active และช่องยังถูกปิด → เก็บ id
