@@ -207,10 +207,10 @@ function BookingManagement() {
           <p className="text-gray-600">จัดการและติดตามการจองช่องเก็บของในตู้เย็น</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => navigate("/booking-fridge")} className="flex items-center gap-2">
+          {/* <Button onClick={() => navigate("/booking-fridge")} className="flex items-center gap-2">
             <Plus size={16} />
             จองช่องใหม่
-          </Button>
+          </Button> */}
           <Button onClick={fetchBookings} disabled={isLoading} variant="outline" className="flex items-center gap-2">
             <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
             รีเฟรช

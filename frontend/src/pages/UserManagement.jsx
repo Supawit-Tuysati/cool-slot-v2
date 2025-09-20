@@ -71,11 +71,11 @@ const UserManagement = () => {
     return `${day}-${month}-${year}   ${hours}:${minutes}:${seconds}`;
   };
 
-  const stats = {
-    total: users.length,
-    active: users.filter((u) => u.status === "Active").length,
-    inactive: users.filter((u) => u.status === "Inactive").length,
-  };
+  // const stats = {
+  //   total: users.length,
+  //   active: users.filter((u) => u.status === "Active").length,
+  //   inactive: users.filter((u) => u.status === "Inactive").length,
+  // };
 
   const getRoleBadge = (role) => {
     switch (role) {
@@ -145,7 +145,7 @@ const UserManagement = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
@@ -181,7 +181,7 @@ const UserManagement = () => {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </div> */}
 
       {/* Filters and Table */}
       <Card className="mb-6">
